@@ -4,7 +4,8 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 set -a; . ./.env; set +a
-mkdir -p out/baseline
+OUTDIR="${1:-baseline}"
+mkdir -p "out/${OUTDIR}"
 
 run () {
   local label="$1" query="$2"
@@ -13,7 +14,7 @@ run () {
     -H "X-Algolia-Application-Id: ${ALGOLIA_APP_ID}" \
     -H "Content-Type: application/json" \
     -d "{\"query\":\"${query}\",\"hitsPerPage\":10,\"facets\":[\"food_type\",\"price_range\",\"dining_style\"]}" \
-    > "out/baseline/${label}.json"
+    > "out/${OUTDIR}/${label}.json"
   printf "%-22s saved\n" "$label"
 }
 
@@ -29,4 +30,4 @@ run 09-cuisine-broad     "steakhouse"
 run 10-ambiguous         "texas"
 run 11-empty             ""
 run 12-zero-results      "vegan sushi burrito"
-echo "Done. 12 responses in out/baseline/"
+echo "Done. 12 responses in out/${OUTDIR}/"
