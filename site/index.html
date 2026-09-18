@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>OpenTable search prototype</title>
+<link rel="stylesheet"
+  href="https://cdn.jsdelivr.net/npm/instantsearch.css@8.19.1/themes/satellite-min.css"
+  integrity="sha256-LpV56au6/lX7sNR7R1j7Jy0Y6jREe2uHOQQZxg9uipo=" crossorigin="anonymous" />
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="wrap">
+      <span class="logo">Restaurant search</span>
+      <div id="searchbox"></div>
+    </div>
+  </header>
+
+  <main class="wrap layout">
+    <button id="filter-toggle" class="filter-toggle" type="button">Filters</button>
+
+    <aside id="filters" class="filters">
+      <div class="filters-head">
+        <span>Filters</span>
+        <div id="clear-refinements"></div>
+      </div>
+      <section><h2>Cuisine</h2><div id="cuisines"></div></section>
+      <section><h2>Price</h2><div id="price"></div></section>
+      <section><h2>Dining style</h2><div id="dining-style"></div></section>
+      <section><h2>City</h2><div id="city"></div></section>
+    </aside>
+
+    <section class="results">
+      <div class="results-head">
+        <h1 id="heading">Top rated right now</h1>
+        <div id="stats"></div>
+      </div>
+      <div id="current-refinements"></div>
+      <div id="hits"></div>
+      <div id="pagination"></div>
+    </section>
+  </main>
+
+<script src="https://cdn.jsdelivr.net/npm/algoliasearch@5.57.0/dist/lite/builds/browser.umd.js"
+  integrity="sha256-NJrnXIMFVRGMM2IieD83YpTvsPPIFKKyj4K/MNyTRQU=" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/instantsearch.js@4.112.0/dist/instantsearch.production.min.js"
+  integrity="sha256-L/uuFNSZ4b4RfpkGECfRzFJaO752CMZxKmoJQScpEPA=" crossorigin="anonymous"></script>
+<script src="app.js"></script>
+</body>
+</html>

@@ -41,5 +41,6 @@
     "image_url",
     "reserve_url",
     "_geoloc"
-  ]
+  ],
+  "removeWordsIfNoResults": "allOptional"
 }
