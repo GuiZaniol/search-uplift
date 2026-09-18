@@ -1,0 +1,45 @@
+{
+  "searchableAttributes": [
+    "brand,name",
+    "location_label",
+    "cuisines",
+    "neighborhood,city",
+    "area,state"
+  ],
+  "attributesForFaceting": [
+    "searchable(cuisines)",
+    "price_label",
+    "dining_style",
+    "searchable(city)",
+    "neighborhood"
+  ],
+  "customRanking": [
+    "desc(quality_score)",
+    "desc(reviews_count)"
+  ],
+  "attributesToHighlight": [
+    "name",
+    "brand",
+    "location_label",
+    "cuisines"
+  ],
+  "attributesToRetrieve": [
+    "objectID",
+    "name",
+    "brand",
+    "location_label",
+    "cuisines",
+    "city",
+    "neighborhood",
+    "address",
+    "dining_style",
+    "price_label",
+    "price_band",
+    "rating",
+    "reviews_count",
+    "quality_score",
+    "image_url",
+    "reserve_url",
+    "_geoloc"
+  ]
+}
