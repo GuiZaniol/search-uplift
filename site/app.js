@@ -5,9 +5,13 @@ const APP_ID = 'VCHGBR7IR9';
 const SEARCH_KEY = 'a31329b111934df9cc97fc41a085db58';
 const INDEX = 'restaurants';
 
+// The CDN build of the lite client registers itself under this global name,
+// and exposes liteClient rather than a default function.
+const { liteClient } = window['algoliasearch/lite'];
+
 const search = instantsearch({
   indexName: INDEX,
-  searchClient: algoliasearch(APP_ID, SEARCH_KEY),
+  searchClient: liteClient(APP_ID, SEARCH_KEY),
   routing: true, // keeps the query and filters in the URL so a search can be shared
 });
 

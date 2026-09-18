@@ -48,6 +48,40 @@ Fix planned: a zero results state that suggests a way back.
 * Junk attributes are searchable by default, including phone numbers and reservation URLs. Confirm and exclude.
 * Whether "tex-mex" should return the 5 Tex-Mex records only, or also the 90 Mexican and 36 Mexican / Southwestern records.
 
-## After tuning
+## After tuning: 2026-09-18
 
-To be filled in Block 2 and Block 3, same queries, same format.
+Same twelve queries, run against the reshaped records and the settings in `config/settings.json`. Raw responses are in `out/after/`. Every query still returns in about 1 ms.
+
+### Fix 1: ranking inside a chain
+
+Query "cyclone anayas". Before, the five Houston locations came back in an order with no meaning: 4.3, then 3.0, then 4.0, then 4.3, then 4.4. After, they come back best first: Midtown 4.4, CityCentre 4.3, Rice Village 4.3, Durham 4.0, Woodway 3.0.
+
+What changed: a `quality_score` derived in the preparation script (a Bayesian average that pulls a rating toward the dataset mean of 4.29 until a restaurant has enough reviews), plus `customRanking: ["desc(quality_score)", "desc(reviews_count)"]`. Scores are rounded to two decimals so later criteria still matter.
+
+Same effect on "ruths" (Baton Rouge 4.8 now leads) and on the empty query, which went from three arbitrary San Diego restaurants to Russell's Steaks at 4.9 from 2,512 reviews.
+
+### Fix 2: telling locations apart, and a usable cuisine filter
+
+Before, the five Cyclone Anaya's differed only by a suffix inside the name, one of which had a double space, and no attribute was facetable at all: asking for facet counts returned an empty object.
+
+After, each result shows a brand and a separate location label, and `attributesForFaceting` declares cuisines (searchable), price, dining style, city and neighborhood. Cuisine grouping also made the filter behave: Mexican went from 90 to 138 records because Tex-Mex now carries the Mexican group, and "steakhouse" went from 421 to 507 hits because Steak and Brazilian Steakhouse join Steakhouse.
+
+Honest note: splitting compound values moved the distinct cuisine count from 114 to 115, so the count did not go down. What improved is usability: the top 20 values now cover 85 percent of records, and the UI shows the top values with a search box rather than all of them.
+
+### Fix 3: a break I caused, and how it was found
+
+Query "mccormick and schmicks". Before: 10 hits. After the first settings change: **0 hits**.
+
+Cause: in the baseline every attribute was searchable, including `price_range`, whose values read "$30 and under". The word "and" in the query had been matching the price text. Naming the searchable attributes removed that accidental match, and since all query words must match, the result set collapsed.
+
+First attempt: `optionalWords: ["and", "the", "of"]`. Confirmed live on the index by reading the settings back, and it did not fix the query. Two control queries isolated the cause: "mccormick schmicks" returned 13 hits and "schmicks" returned 13, so the apostrophe and ampersand were never the problem, only the word "and".
+
+Second attempt: `removeWordsIfNoResults: "allOptional"`, which relaxes matching only when a query would otherwise return nothing. Result: 13 hits, led by Las Vegas 4.4 from 1,481 reviews. The `optionalWords` setting was removed rather than left in the file doing nothing.
+
+### Unchanged on purpose
+
+Typo tolerance, word concatenation and prefix matching were already right by default and were not touched: "benihanna" still returns 24 Benihana locations, "meltingpot" still returns 26 Melting Pots, "ruths chris denver" still narrows to exactly 1.
+
+"texas" narrowed from 23 hits to 18 because addresses and phone numbers are no longer searchable. Fewer hits, all of them restaurants rather than street names.
+
+"vegan sushi burrito" still returns nothing, which is honest for this dataset. The UI now answers with a recovery message instead of a blank screen.
