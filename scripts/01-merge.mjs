@@ -1,5 +1,11 @@
 // Block 1: join the two source files into one list of records.
-// Deliberately no cleaning yet. This is the "before" version.
+// This is the "before" version used for the relevance baseline: names, cuisines
+// and both price fields stay exactly as delivered. The only changes made here:
+//   * objectID is stored as text, and stars and review counts become numbers.
+//   * Four source fields are left out because nothing uses them:
+//     country (every record says "US"), phone and phone_number (they disagree
+//     on 160 records, and the result card shows no phone), and
+//     mobile_reserve_url (duplicates reserve_url).
 import { readFileSync, writeFileSync } from 'node:fs';
 
 const list = JSON.parse(readFileSync('data/raw/restaurants_list.json', 'utf8'));
