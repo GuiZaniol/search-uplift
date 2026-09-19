@@ -61,6 +61,9 @@ function qualityScore(stars, reviews) {
   return Math.round(score * 100) / 100; // rounded so later criteria still matter
 }
 
+// 5. Fields left out. postal_code and the integer price are not carried over.
+//    state and payment_options were dropped on Sept 19 (decision 22): once state
+//    stopped being searchable, neither was searched, filtered, ranked, returned or shown.
 const records = raw.map((r) => {
   const { brand, location_label } = splitName(r.name);
   return {
@@ -71,7 +74,6 @@ const records = raw.map((r) => {
     cuisines: cuisines(r.food_type),
     food_type_raw: r.food_type,
     city: r.city,
-    state: r.state,
     neighborhood: r.neighborhood,
     area: r.area,
     address: r.address,
@@ -82,7 +84,6 @@ const records = raw.map((r) => {
     rating: r.stars_count,
     reviews_count: r.reviews_count,
     quality_score: qualityScore(r.stars_count, r.reviews_count),
-    payment_options: r.payment_options,
     image_url: r.image_url,
     reserve_url: r.reserve_url,
   };
