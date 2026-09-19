@@ -1,6 +1,6 @@
 # Relevance testing
 
-Same twelve queries, run three times: before tuning, after tuning, and on the final configuration. Raw responses are in `out/baseline/`, `out/after/` and `out/final/`.
+Same twelve queries, run three times: before tuning, after tuning, and on the final configuration. Raw responses for the baseline and final runs are in `out/baseline/` and `out/final/`. The after run was kept locally and is not in the repo.
 
 ## Baseline: 2026-09-18
 
@@ -50,7 +50,7 @@ Fix planned: a zero results state that suggests a way back.
 
 ## After tuning: 2026-09-18
 
-Same twelve queries, run against the reshaped records and the index configuration set in the Algolia dashboard (exported to `config/index-settings.json`). Raw responses are in `out/after/`. Every query still returns in about 1 ms.
+Same twelve queries, run against the reshaped records and the index configuration set in the Algolia dashboard (exported to `config/index-settings.json`). Raw responses were saved locally in `out/after/` (not committed). Every query still returns in about 1 ms.
 
 ### Fix 1: ranking inside a chain
 
@@ -96,7 +96,7 @@ The ten queries that returned results in the after run are unchanged: same hit c
 
 ### What differs from out/after
 
-* **"mccormick and schmicks": 13 hits, led by Las Vegas.** The after run was captured before Fix 3, so `out/after/` still shows 0 hits. The final run matches the Fix 3 result. Two settings now drop "and" from this query: `removeWordsIfNoResults` from Fix 3, and English stop word removal. The response does not say which one applied; the result is the same either way.
+* **"mccormick and schmicks": 13 hits, led by Las Vegas.** The after run was captured before Fix 3, so `out/after/` still shows 0 hits. The final run matches the Fix 3 result. Two settings could drop "and" from this query: `removeWordsIfNoResults` from Fix 3, and English stop word removal. Query 25 later showed it is stop word removal (see the McCormick example below).
 * **"vegan sushi burrito": 194 hits, every one matching only "sushi".** This comes from `removeWordsIfNoResults: "allOptional"` (Fix 3), which makes every word optional when the full query finds nothing. Neither "vegan" nor "burrito" is a stop word or an optional word.
 
 Fix 3 removed `optionalWords` because it did not fix "mccormick and schmicks". It is back on the index as part of the September 19 changes.
@@ -108,3 +108,49 @@ Fix 3 removed `optionalWords` because it did not fix "mccormick and schmicks". I
 ### What this run does not show
 
 None of the twelve queries was written for the September 19 changes: the synonym, stop words other than "and", or the new searchable attribute order. The run shows those changes left all twelve results as they were; it does not show what the changes do.
+
+## Tests for the September 19 changes
+
+Queries 13 to 24 in `scripts/04-baseline.sh`, written for the three changes above and run on September 19 after the reindex that dropped `state` and `payment_options` (decision 22). Responses in `out/final/`.
+
+### Synonym: brazil = brasil (decision 19)
+
+* **"brasil": 43 hits.** The top five are Texas de Brazil locations and Berimbau Do Brasil is sixth. 38 records have a Brazil or Brasil word in a searchable field; the other hits are most likely typo matches, such as the three records containing "Basil", one letter away.
+* **"braz": 90 hits,** led by Texas de Brazil and Fogo de Chao Brazilian Steakhouse. As the last word, "braz" is matched as the start of a longer word, with one typo allowed, which likely brings in words such as "Brasserie" (16 records).
+* **"braz", filtered to Berimbau Do Brasil (query 15): 1 hit.** The record is found through its cuisine, "Brazilian". The highlight marks the cuisine only, not "Brasil" in the name. This matches what decision 19 noticed: "braz" does not reach the word "brasil".
+
+### Stop words (decision 20)
+
+Stop words are very common words ("the", "in", "of") that appear in many records and say little about what the diner wants. Removing them from the query means a diner who types a natural phrase is not held to every small word in it.
+
+* **"steakhouse in denver": 46 hits,** exactly the number of records that have a Steakhouse word and a Denver word (city or area). "in" is not required. The top four are steakhouses in Denver; Twin Owls Steakhouse in Estes Park (area "Denver / Colorado") is fifth.
+
+### Searchable attribute order (decision 21)
+
+Facts only; the reasoning for the order is decision 21.
+
+* **"houston": 232 hits.** All top ten have Houston in the name and are in the city of Houston. For scale: 175 records have the city Houston and 231 have the area Houston.
+* **"steak denver": 14 hits,** led by Ruth's Chris Steak House, Denver. Pepper Tree Restaurant (Colorado Springs) is sixth: it matches through `food_type_raw` "Steak" and its area "Denver / Colorado". Its card highlights nothing, because neither field is highlighted.
+* **"fine dining denver": 46 hits.** The top four are fine dining restaurants in Denver. Carlos' Bistro (Colorado Springs) is fifth, matched on dining style and area.
+* **"steakhouse tx": 508 hits,** almost all steakhouses from anywhere. "tx" matches no state, since `state` is no longer on the record; the only word starting with "tx" in the data is the restaurant Txikito. With the no-results fallback switched off (query 28) it returns 0, so the 508 hits come from `removeWordsIfNoResults: "allOptional"`: the full query finds nothing, so every word becomes optional.
+
+### How "and" is handled: the McCormick example
+
+The query "mccormick and schmicks" has been in the test set from the start. The restaurants are named "McCormick & Schmick's", with an ampersand, so the word "and" appears in none of their searchable fields.
+
+**How it got here**
+
+1. Baseline, no configuration: 10 hits, but only because "and" matched the price text "$30 and under", which was searchable.
+2. After naming the searchable attributes: 0 hits. Every query word had to match, and "and" matched nothing.
+3. Fix 3: optional words (and, the, of) did not bring the results back at the time. The no-results fallback did: 13 hits.
+4. September 19 (decision 20): English stop word removal on, and optional words back on the index.
+
+**What it does today** (queries 25 to 28, with Algolia's ranking info turned on)
+
+* **As configured, stop word removal handles it.** Algolia reports the parsed query as "mccormick schmicks": "and" is taken out before matching, so it is on Algolia's English stop word list. The two remaining words match side by side in the name, and all 13 locations come back. The fallback is not involved.
+* **A word that is not a stop word still blocks.** "mccormick qwxz schmicks" with the fallback off returns 0 (query 27).
+* **The fallback is what rescues "steakhouse tx"** (query 28, above), not this query.
+
+**What is still open**
+
+With stop word removal, optional words and the fallback all switched off for a single request (queries 18, 19 and 26), "and" stays in the parsed query but still does not block: 13 hits, with 2 of the 3 query words matched. The request shows every override was received. The response does not say why "and" is not required, and these tests do not settle it. Settling it would mean changing the index's optional words for a test, which is a dashboard change.

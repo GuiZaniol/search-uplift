@@ -1,5 +1,8 @@
 .env
 node_modules/
 .DS_Store
-out/
+# Query responses: only the baseline and final runs are committed
+out/*
+!out/baseline/
+!out/final/
 reference-md/
