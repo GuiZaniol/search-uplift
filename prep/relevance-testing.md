@@ -1,6 +1,6 @@
 # Relevance testing
 
-Same twelve queries, run before and after tuning. Raw responses are in `out/baseline/`.
+Same twelve queries, run three times: before tuning, after tuning, and on the final configuration. Raw responses are in `out/baseline/`, `out/after/` and `out/final/`.
 
 ## Baseline: 2026-09-18
 
@@ -85,3 +85,26 @@ Typo tolerance, word concatenation and prefix matching were already right by def
 "texas" narrowed from 23 hits to 18 because addresses and phone numbers are no longer searchable. Fewer hits, all of them restaurants rather than street names.
 
 "vegan sushi burrito" still returns nothing, which is honest for this dataset. The UI now answers with a recovery message instead of a blank screen.
+
+## Final configuration: 2026-09-19
+
+Same twelve queries, run against the configuration as I adjusted it in the Algolia dashboard on September 19: a new searchable attribute order, English stop word removal, optional words (and, the, of, in, at) and a brazil/brasil synonym. Export in `config/index-settings.json`, raw responses in `out/final/`.
+
+### What stayed the same
+
+The ten queries that returned results in the after run are unchanged: same hit counts, same top five, same order. That covers "cyclone anayas", "benihanna", "meltingpot", "ruths", "ruths chris", "ruths chris denver", "tex-mex", "steakhouse", "texas" and the empty query.
+
+### What differs from out/after
+
+* **"mccormick and schmicks": 13 hits, led by Las Vegas.** The after run was captured before Fix 3, so `out/after/` still shows 0 hits. The final run matches the Fix 3 result. Two settings now drop "and" from this query: `removeWordsIfNoResults` from Fix 3, and English stop word removal. The response does not say which one applied; the result is the same either way.
+* **"vegan sushi burrito": 194 hits, every one matching only "sushi".** This comes from `removeWordsIfNoResults: "allOptional"` (Fix 3), which makes every word optional when the full query finds nothing. Neither "vegan" nor "burrito" is a stop word or an optional word.
+
+Fix 3 removed `optionalWords` because it did not fix "mccormick and schmicks". It is back on the index as part of the September 19 changes.
+
+### Correction to the after section
+
+"Unchanged on purpose" says "vegan sushi burrito" still returns nothing and the UI answers with a recovery message. That matches `out/after/`, which was captured before Fix 3. With Fix 3 in place the query returns 194 sushi restaurants, and the recovery message only appears when no word in the query matches anything.
+
+### What this run does not show
+
+None of the twelve queries was written for the September 19 changes: the synonym, stop words other than "and", or the new searchable attribute order. The run shows those changes left all twelve results as they were; it does not show what the changes do.
