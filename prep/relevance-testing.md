@@ -50,7 +50,7 @@ Fix planned: a zero results state that suggests a way back.
 
 ## After tuning: 2026-09-18
 
-Same twelve queries, run against the reshaped records and the settings in `config/settings.json`. Raw responses are in `out/after/`. Every query still returns in about 1 ms.
+Same twelve queries, run against the reshaped records and the index configuration set in the Algolia dashboard (exported to `config/index-settings.json`). Raw responses are in `out/after/`. Every query still returns in about 1 ms.
 
 ### Fix 1: ranking inside a chain
 
