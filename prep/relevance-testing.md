@@ -151,9 +151,21 @@ The query "mccormick and schmicks" has been in the test set from the start. The 
 * **A word that is not a stop word still blocks.** "mccormick qwxz schmicks" with the fallback off returns 0 (query 27).
 * **The fallback is what rescues "steakhouse tx"** (query 28, above), not this query.
 
-**What is still open**
+**Settled: September 21**
 
-With stop word removal, optional words and the fallback all switched off for a single request (queries 18, 19 and 26), "and" stays in the parsed query but still does not block: 13 hits, with 2 of the 3 query words matched. The request shows every override was received. The response does not say why "and" is not required, and these tests do not settle it. Settling it would mean changing the index's optional words for a test, which is a dashboard change.
+Queries 18, 19 and 26 tried to switch optional words off for one request by sending a placeholder list. That assumption was wrong. Optional words sent with a request are added to the index's own list (and, the, of, in, at), not used in its place. So "and" stayed optional from the index list, which is why it did not block.
+
+The test: queries 34 to 46 in `scripts/08-optional-words.sh`, responses in `out/optional-words/`. Same query, a different middle word each time, with stop word removal, the no-results fallback and the request's optional words all switched off.
+
+* **and, of, at, in** (on the index list): 13 hits each, 2 of 3 words matched.
+* **for, with, on, by** (English stop words, not on the list): 0 hits each.
+* **steak** (a word found in other records): 0 hits. Made optional by the request: 13.
+* **for, made optional by the request:** 13 hits. In that same request, "and" is still optional: 13. Both lists apply.
+* **the:** 13 hits, all 3 words matched on the first result, the Roseville location "The Fountains". An optional word still counts toward ranking when it does match.
+
+Every optional word that did not match shows the same ranking info: 2 words matched, proximity 9.
+
+What it means: an optional word set on the index cannot be switched off from a single request; only the index list can. I did not find this stated in Algolia's documentation and would confirm it with the Algolia team.
 
 ## Location: 2026-09-21
 

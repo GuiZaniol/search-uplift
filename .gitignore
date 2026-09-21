@@ -6,4 +6,5 @@ out/*
 !out/baseline/
 !out/final/
 !out/geo/
+!out/optional-words/
 reference-md/
