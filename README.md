@@ -5,7 +5,21 @@ A search and discovery prototype for OpenTable, built on Algolia with the 5,000 
 - **Live demo:** https://guizaniol.github.io/search-uplift/site/
 - **Code:** https://github.com/GuiZaniol/search-uplift
 
-## Approach
+## Summary
+
+OpenTable wants more search and browsing sessions to end in a booking. Its discovery notes describe two diners: one who knows the restaurant and one who is exploring. This prototype shows what changes for each of them, on OpenTable's own restaurant data.
+
+**Diners who know the restaurant find it on the first try.** Misspelled, run-together and partial names return the right restaurant ("benihanna", "meltingpot", "ruths"). A chain's locations appear as separate results, each labeled with its location, so the diner can tell them apart. When location does not separate them, the best rated comes first.
+
+**Diners who are exploring can browse before they type.** The page opens on the top rated restaurants near them. Filters for cuisine, price, dining style and city narrow the list, and cuisines are grouped, so choosing Mexican also brings in Tex-Mex. On a phone, the filters sit behind one button.
+
+**Results start local.** Every search is ranked by distance from the diner's approximate location, with no permission prompt. One tap switches to their exact position. Distance changes the order but never hides a result, so a search for a restaurant in another city still finds it.
+
+**Most of the improvement came from reshaping the data.** Algolia handled typos and partial names with its defaults. What held search back was the data itself: chain and location in one name, 114 inconsistent cuisine labels, and two price fields that disagree on 220 restaurants. A repeatable preparation script fixes this before indexing, and it is what makes the ranking and filters work.
+
+**Next: connect search to bookings.** The prototype shows better results. It does not yet show more bookings. The next phase adds click and conversion tracking, then tests each change against the current experience. The full list is under [Next steps](#next-steps), grouped into data transformation, index fine tuning and experimentation.
+
+## How I built it
 
 I built around the two diners in the discovery notes.
 
@@ -51,10 +65,10 @@ Tests: `scripts/07-geo.sh`, responses in `out/geo/`, write-up in `prep/relevance
 
 ## How I tested relevance
 
-`prep/relevance-testing.md` has the full record: twelve queries run on the untuned index, after tuning and on the final configuration, then sixteen more for the September 19 dashboard changes, and five for location. Three examples:
+`prep/relevance-testing.md` has the full record: twelve queries run on the untuned index, after tuning and on the final configuration, then sixteen more for the September 19 dashboard changes, five for location, and thirteen that settled how optional words combine. Three examples:
 
 - **"cyclone anayas"**: five locations in an order with no meaning (4.3, 3.0, 4.0, 4.3, 4.4 stars). Best first after the quality score.
-- **"mccormick and schmicks"**: a break I caused. Naming the searchable attributes took away the only thing "and" had been matching (the price text "$30 and under"), and results dropped from 10 to 0. The note shows how it was found, how it was fixed, and what is still open.
+- **"mccormick and schmicks"**: a break I caused. Naming the searchable attributes took away the only thing "and" had been matching (the price text "$30 and under"), and results dropped from 10 to 0. The note shows how it was found, how it was fixed, and a follow-up test that settled why "and" is not required: optional words sent with a request add to the index list rather than replace it.
 - **"steakhouse"**: 421 hits led by names containing the word, while 123 records tagged "Steak" sat under a separate value. 507 after the cuisine rebuild.
 
 ## Assumptions about the data
@@ -81,7 +95,7 @@ The index configuration lives in the Algolia dashboard; `config/index-settings.j
 
 ## What each file does
 
-Run order: `01` → `05` → `02`. `06` after each dashboard change. `03`, `04`, `07` for testing.
+Run order: `01` → `05` → `02`. `06` after each dashboard change. `03`, `04`, `07`, `08` for testing.
 
 ### Data
 
@@ -124,6 +138,10 @@ Run order: `01` → `05` → `02`. `06` after each dashboard change. `03`, `04`,
   - Location tests, same parameters as the site.
   - Times Square, Weston; 1 km bands vs default 10 m; chain from Times Square; IP fallback.
   - Distance per hit from Algolia's ranking info.
+- **`scripts/08-optional-words.sh`**
+  - Settles why "and" was not required with everything off.
+  - Same query, 13 middle words; everything off per request.
+  - Result: request optional words add to the index list, not replace it.
 
 ### Configuration
 
@@ -155,6 +173,7 @@ Run order: `01` → `05` → `02`. `06` after each dashboard change. `03`, `04`,
 - **`out/baseline/`**: 12 responses, untuned index.
 - **`out/final/`**: 28 responses, final configuration.
 - **`out/geo/`**: 5 responses, location tests.
+- **`out/optional-words/`**: 13 responses, how optional words combine.
 
 ## The data
 
@@ -210,12 +229,33 @@ Eight source fields are not on the index. Records carry what search, filters, ra
 
 ## Next steps
 
-- Spelling variants across languages. brazil = brasil is one synonym; OpenTable would need this at scale.
-- A maintained stop word and optional word list, much larger than the five words I added.
-- Search data to set the searchable attribute order: which fields diners actually match on.
-- Precision that changes with distance. `aroundPrecision` accepts ranges: for example 1 km bands close by and one wide band beyond 50 km, so a chain far away is ordered by rating again. The right values need testing in dense and sparse areas.
-- Sorting by price or rating with replica indices. `price_band` is already on each record for it.
-- Zip code search, with typo tolerance limited for that field.
-- Click and conversion events, to measure search to booking, OpenTable's stated goal.
-- Natural language search ("cheap sushi near me tonight").
-- Settle why "and" is not required with every setting switched off (last section of the relevance note).
+Grouped by where the work sits. Each item says what it would change for OpenTable.
+
+### Data transformation
+
+- **Chain and location as source fields.** The prototype splits them out of the restaurant name, which works for 1,086 names with one known exception. A structured field from OpenTable's own systems removes the guesswork.
+- **Richer discovery attributes.** Occasion, atmosphere, features such as outdoor seating or private dining, opening hours and table availability. This dataset has none of them, and they are what exploring diners would filter and browse by.
+- **Fresh images and reservation links.** The ones here come from a 2015 scrape and were not tested. Cards fall back to a placeholder today.
+- **Better neighborhood data.** In 2,491 records the neighborhood just repeats the city, which limits browsing by area.
+- **Zip code and phone search.** Both were left out. Adding them back needs typo tolerance limited on those fields, since a wrong digit points to a different area.
+- **A pipeline instead of a one-off script.** Run the preparation on a schedule and send only what changed (partial updates), so new restaurants, closures and rating changes reach search quickly.
+
+### Index fine tuning
+
+- **Searchable attribute order from real search data.** I set the order by judgment, from using the live OpenTable site. Query and click data would show which fields diners actually match on.
+- **Language and spelling variants at scale.** brazil = brasil is one synonym. Cuisines and restaurant names come from many languages, so this needs a maintained synonym list.
+- **A maintained stop word and optional word list,** much larger than the five words I added, reviewed as new queries come in.
+- **State search.** "steakhouse tx" currently returns steakhouses from anywhere, because state is not on the record. Bringing state back as a filter, with abbreviations as synonyms (tx = texas), would fix it. It needs testing, since "texas" also appears in names such as Texas de Brazil.
+- **Location precision that changes with distance.** 1 km bands close by and a wide band far away, so a chain searched from another state is ordered by rating again instead of distance.
+- **Sorting by price and rating,** named in the discovery notes. Replica indices would support it; `price_band` is already on every record.
+- **Neighborhood as a filter.** It is already set up for filtering in the index; the page does not show it yet.
+
+### Experimentation
+
+- **Measure search to booking first.** Send click and conversion events from day one, and set a baseline before changing anything. This is the metric OpenTable named.
+- **A/B test the relevance changes** against the current experience, one at a time: the quality score, location precision, the no-results fallback.
+- **Tune the quality score against bookings.** Today a restaurant's own rating carries half the weight at 50 reviews, and more as reviews grow. Booking data would show the right balance.
+- **Review failing searches every week.** Searches with no results or no clicks feed the synonym and stop word lists above.
+- **Help exploring diners start.** Popular searches and query suggestions on the empty page, tested against the current browse screen.
+- **Natural language search** ("cheap sushi near me tonight"), tested on a slice of traffic before a wider rollout.
+- **Personalization,** once there is enough click and booking history to learn each diner's cuisine and price preferences.
