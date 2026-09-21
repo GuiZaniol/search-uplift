@@ -7,7 +7,7 @@ const raw = JSON.parse(readFileSync('data/records.json', 'utf8'));
 // 1. Brand and location. 1,086 names carry a location after a spaced dash.
 //    Assumption: the text after the first spaced dash is a location.
 //    Known exception: "Star of Honolulu - Five Star" is a concept, not a place.
-const SEPARATOR = /\s+[-–]\s+/;
+const SEPARATOR = /\s+[-\u2013]\s+/; // a hyphen, or the longer dash character (U+2013) some names use
 function splitName(name) {
   const clean = name.replace(/\s+/g, ' ').trim();
   const match = clean.split(SEPARATOR);
