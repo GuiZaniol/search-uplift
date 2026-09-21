@@ -4,6 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>OpenTable search prototype</title>
+<link rel="icon" href="data:," />
 <link rel="stylesheet"
   href="https://cdn.jsdelivr.net/npm/instantsearch.css@8.19.1/themes/satellite-min.css"
   integrity="sha256-LpV56au6/lX7sNR7R1j7Jy0Y6jREe2uHOQQZxg9uipo=" crossorigin="anonymous" />
@@ -33,8 +34,12 @@
 
     <section class="results">
       <div class="results-head">
-        <h1 id="heading">Top rated right now</h1>
+        <h1 id="heading">Top rated near you</h1>
         <div id="stats"></div>
+      </div>
+      <div class="geo-bar">
+        <span id="geo-status">Showing places near your approximate location first.</span>
+        <button id="geo-button" class="geo-button" type="button">Use my exact location</button>
       </div>
       <div id="current-refinements"></div>
       <div id="hits"></div>

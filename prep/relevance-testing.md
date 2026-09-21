@@ -154,3 +154,32 @@ The query "mccormick and schmicks" has been in the test set from the start. The 
 **What is still open**
 
 With stop word removal, optional words and the fallback all switched off for a single request (queries 18, 19 and 26), "and" stays in the parsed query but still does not block: 13 hits, with 2 of the 3 query words matched. The request shows every override was received. The response does not say why "and" is not required, and these tests do not settle it. Settling it would mean changing the index's optional words for a test, which is a dashboard change.
+
+## Location: 2026-09-21
+
+Five queries in `scripts/07-geo.sh`, sent with the same location parameters as the site: `aroundRadius: "all"` and `aroundPrecision: 1000`. Responses in `out/geo/`. Algolia's ranking info reports each hit's distance in units of the precision, so with 1,000 it reads in kilometers. Why these settings: the Location section of the README.
+
+### Dense area: Times Square, empty query (query 29)
+
+All 5,000 restaurants come back, nearest band first. The whole first page sits in the first band (within 1 km) and is ordered by quality score: Pazza Notte 4.83, Le Bernardin 4.7 from 4,232 reviews, PizzArte, Restaurant Soba Nippon, Trattoria Dell'Arte.
+
+### What the 1 km bands change (query 31)
+
+The same query without `aroundPrecision`. Distance alone decides the order: Bond 45 at 25 m, Crossroads American Kitchen at 45 m, O'Lunney's Times Square Pub at 110 m. O'Brien's Irish Pub (3.5 stars from 61 reviews) is fifth. Le Bernardin is not on the first page. The response reports a precision of 1 when the parameter is not sent; Algolia's documentation lists 10 m as the default. At these distances the order is the same either way.
+
+### Sparse area: Weston, Florida, empty query (query 30)
+
+All 5,000 come back. Four restaurants are within 25 km: Ceviche Arigato (2 km), Brazaviva Churrascaria in Sunrise (8 km), The Melting Pot in Cooper City (10 km) and Mazza Mediterranean Cuisine in Pembroke Pines (11 km). The page continues with Fort Lauderdale and Hollywood at 25 to 27 km. With a 25 km radius, this diner would see four results.
+
+### A chain from Times Square: "texas de brazil" (query 32)
+
+10 hits, one per location, nearest first: Yonkers (24 km), Syracuse (314 km), Pittsburgh, Columbus, Memphis, then Addison, Dallas, Houston, San Antonio and Denver. There is no Texas de Brazil in New York City in this dataset. Distance outranks quality here: Addison, the best rated location (4.7), is sixth.
+
+### No shared location: the IP fallback (query 33)
+
+`aroundLatLngViaIP: true`, sent from my Terminal on the same connection as my browser. Algolia placed the request at 26.1101,-80.4244, about 3 km from the Weston point in query 30, and returns that location in the response (`aroundLatLng`). The site uses it to show miles on each card. The first page matches query 30 apart from small shifts from the different center: NYY Steak in Coconut Creek appears at 29 km and Fascino's drops off.
+
+### What this shows, and a trade-off
+
+Geo ranks before custom ranking. That is what the diner at Times Square wants, and it also means a chain searched from far away is listed nearest first rather than best first: from Florida, "cyclone anayas" lists the Houston locations by distance, not in the quality order shown in Fix 1. `aroundPrecision` also accepts a list of ranges, so precision can widen with distance (next steps in the README).
+

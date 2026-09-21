@@ -19,6 +19,10 @@ body { margin:0; background:var(--bg); color:var(--ink);
 .results-head h1 { font-size:20px; margin:0; }
 #stats { color:var(--muted); font-size:13px; }
 #current-refinements { margin:10px 0; }
+.geo-bar { display:flex; align-items:center; flex-wrap:wrap; gap:8px 12px; color:var(--muted); font-size:13px; margin:4px 0 8px; }
+.geo-button { font:inherit; color:var(--accent); font-weight:600; background:#fff; border:1px solid var(--line);
+  border-radius:999px; padding:5px 12px; cursor:pointer; }
+.geo-button[hidden] { display:none; }
 
 .ais-Hits-list { display:grid; grid-template-columns:repeat(auto-fill, minmax(320px,1fr)); gap:14px; }
 .ais-Hits-item { padding:0; box-shadow:none; border:1px solid var(--line); border-radius:10px; background:#fff; }

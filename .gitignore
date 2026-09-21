@@ -5,4 +5,5 @@ node_modules/
 out/*
 !out/baseline/
 !out/final/
+!out/geo/
 reference-md/
