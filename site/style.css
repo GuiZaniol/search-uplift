@@ -10,6 +10,7 @@ body { margin:0; background:var(--bg); color:var(--ink);
 #searchbox { flex:1; }
 
 .layout { display:grid; grid-template-columns:240px 1fr; gap:28px; padding-top:20px; padding-bottom:48px; }
+.layout > * { min-width:0; } /* grid columns may shrink below their content, so nothing pushes the page sideways */
 .filters section { margin-bottom:20px; }
 .filters h2 { font-size:12px; text-transform:uppercase; letter-spacing:.04em; color:var(--muted); margin:0 0 8px; }
 .filters-head { display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; }
@@ -46,5 +47,7 @@ body { margin:0; background:var(--bg); color:var(--ink);
   .filters.open { display:block; }
   .ais-Hits-list { grid-template-columns:1fr; }
   .card-img { width:72px; height:72px; }
+  .ais-Pagination-list { flex-wrap:wrap; }
+  .ais-Pagination-item--firstPage, .ais-Pagination-item--lastPage { display:none; }
   .topbar .wrap { flex-wrap:wrap; }
 }
