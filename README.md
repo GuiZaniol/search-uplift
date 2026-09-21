@@ -19,7 +19,7 @@ I built around the two diners in the discovery notes.
 
 ## A note on the Algolia configuration
 
-Before your September 19 email, I worked through the relevance decisions (searchable attributes, facets, custom ranking, no-results behavior) in discussion with Claude and applied them through the API with a script. After your note I removed that script. I did not re-enter those settings from scratch; I reviewed each one in the dashboard, I stand behind them, and I made my own changes there: reordered the searchable attributes, turned on English stop word removal, added optional words and a brazil/brasil synonym. The repo keeps a read-only export of the final settings in `config/index-settings.json`. My focus throughout was being able to explain why each setting is there and what it changed, which `prep/relevance-testing.md` documents with before and after results.
+Before your September 18 email, I worked through the relevance decisions (searchable attributes, facets, custom ranking, no-results behavior) in discussion with Claude and applied them through the API with a script. After your note I removed that script. I did not re-enter those settings from scratch; I reviewed each one in the dashboard, I stand behind them, and I made my own changes there: reordered the searchable attributes, turned on English stop word removal, added optional words and a brazil/brasil synonym. The repo keeps a read-only export of the final settings in `config/index-settings.json`. My focus throughout was being able to explain why each setting is there and what it changed, which `prep/relevance-testing.md` documents with before and after results.
 
 ## Index configuration
 
