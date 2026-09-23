@@ -291,6 +291,36 @@ td{color:var(--navy)}
 .assume .panel p{font-size:14.5px;color:var(--slate);margin-top:6px}
 .assume .panel h3{font-size:15px}
 
+
+/* ---------- Test log (appendix) ---------- */
+.mx{overflow-x:auto;background:var(--paper);border:1px solid var(--line);border-radius:12px}
+.mx table{min-width:860px;font-size:13px}
+.mx td{vertical-align:middle;padding-top:5px;padding-bottom:5px}
+.mx td:first-child{font:500 12px var(--mono);color:var(--slate-2);width:34px}
+.mx .qq{font:500 13px var(--mono);color:var(--navy);white-space:nowrap}
+.mx .qq small{display:block;font:400 12px var(--body);color:var(--slate);white-space:normal;margin-top:2px}
+.cell{display:flex;flex-direction:column;gap:1px;border-left:3px solid var(--line);padding:2px 0 2px 9px;min-width:0}
+.cell b{font:600 14px var(--display);color:var(--navy);font-variant-numeric:tabular-nums}
+.cell span{font-size:12px;color:var(--slate);line-height:1.3}
+.cell.up{border-color:var(--good)} .cell.up b{color:var(--good)}
+.cell.down{border-color:var(--bad)} .cell.down b{color:var(--bad)}
+.cell.same{border-color:var(--line)}
+.legend{display:flex;flex-wrap:wrap;gap:14px;font-size:12.5px;color:var(--slate)}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px;vertical-align:-1px}
+.tabs{display:flex;flex-wrap:wrap;gap:8px}
+.tab{font:600 13px var(--body);border:1px solid var(--line);background:var(--paper);color:var(--navy);border-radius:999px;padding:7px 14px;cursor:pointer}
+.tab small{font:500 11px var(--mono);color:var(--slate);margin-left:6px}
+.tab[aria-selected="true"]{background:var(--navy);border-color:var(--navy);color:#fff}
+.tab[aria-selected="true"] small{color:#AEB5FF}
+.tpanel .why{font-size:14.5px;color:var(--slate);margin:0 0 10px;max-width:80ch}
+.tpanel .why b{color:var(--navy)}
+.lg td:nth-child(4){font:600 14px var(--display);color:var(--navy);text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+.lg td:nth-child(4).z{color:var(--bad)}
+.lg td:nth-child(3){color:var(--slate);font-size:12.5px}
+.lg td:nth-child(5){font-size:13px}
+.lg .qq{white-space:normal}
+.seeall{font:600 13px var(--body);color:var(--xenon);background:none;border:0;padding:0;cursor:pointer;text-decoration:underline;text-underline-offset:3px}
+
 /* ---------- Responsive ---------- */
 @media (max-width: 980px){
   .hero,.split,.split.even,.geo-grid,.close{grid-template-columns:minmax(0,1fr)}
@@ -679,6 +709,7 @@ td{color:var(--navy)}
   <div class="head">
     <div class="eyebrow">How I tested relevance</div>
     <h2 class="wide">46 queries, saved responses, before and after every change</h2>
+    <p><button class="seeall" type="button" data-goto="testlog">See every query and result in Appendix C and D</button></p>
   </div>
   <div class="timeline">
     <div class="tl"><div class="dot"></div><div class="qn">12<small>queries</small></div><h3>Baseline</h3><p>Plain join, no settings. Six failure modes found.</p></div>
@@ -851,11 +882,43 @@ td{color:var(--navy)}
  </div>
 </section>
 
-<!-- A3 FILES -->
+
+<!-- A3 TEST MATRIX -->
+<section class="slide" data-ch="Appendix" data-title="Twelve core queries, three runs" data-apx="1" id="testlog">
+ <div class="slide-in">
+  <div class="head">
+    <div class="eyebrow apx">Appendix C · Relevance tests</div>
+    <h2 class="wide">Twelve core queries across three runs</h2>
+  </div>
+  <div class="mx tbl">
+   <table>
+    <thead><tr><th>#</th><th>Query</th><th>Baseline · untuned, Sept 18</th><th>After tuning · Sept 18</th><th>Final · Sept 19</th></tr></thead>
+    <tbody><tr><td>01</td><td class="qq">cyclone anayas<small>chain, order of locations</small></td><td><div class="cell same"><b>5</b><span>Rice Village 4.3, Woodway 3.0 second</span></div></td><td><div class="cell up"><b>5</b><span>Midtown 4.4 first, best to worst</span></div></td><td><div class="cell same"><b>5</b><span>unchanged</span></div></td></tr><tr><td>02</td><td class="qq">benihanna<small>misspelled</small></td><td><div class="cell same"><b>24</b><span>all Benihana, file order</span></div></td><td><div class="cell up"><b>24</b><span>labeled, best rated first</span></div></td><td><div class="cell same"><b>24</b><span>unchanged</span></div></td></tr><tr><td>03</td><td class="qq">meltingpot<small>run together</small></td><td><div class="cell same"><b>26</b><span>Rochester 4.5 first</span></div></td><td><div class="cell up"><b>26</b><span>Tucson 4.7 first</span></div></td><td><div class="cell same"><b>26</b><span>unchanged</span></div></td></tr><tr><td>04</td><td class="qq">ruths<small>partial name</small></td><td><div class="cell same"><b>35</b><span>Harrah's Las Vegas 4.5 first</span></div></td><td><div class="cell up"><b>35</b><span>Baton Rouge 4.8 first</span></div></td><td><div class="cell same"><b>35</b><span>unchanged</span></div></td></tr><tr><td>05</td><td class="qq">ruths chris<small>chain, no location</small></td><td><div class="cell same"><b>31</b><span>Harrah's Las Vegas 4.5 first</span></div></td><td><div class="cell up"><b>31</b><span>Baton Rouge 4.8 first</span></div></td><td><div class="cell same"><b>31</b><span>unchanged</span></div></td></tr><tr><td>06</td><td class="qq">ruths chris denver<small>chain plus location</small></td><td><div class="cell same"><b>1</b><span>Denver</span></div></td><td><div class="cell same"><b>1</b><span>Denver, location labeled</span></div></td><td><div class="cell same"><b>1</b><span>unchanged</span></div></td></tr><tr><td>07</td><td class="qq">mccormick and schmicks<small>punctuation, the word "and"</small></td><td><div class="cell same"><b>10</b><span>"and" matched price text</span></div></td><td><div class="cell down"><b>0</b><span>broken: attributes named</span></div></td><td><div class="cell up"><b>13</b><span>fixed, Las Vegas 4.4 first</span></div></td></tr><tr><td>08</td><td class="qq">tex-mex<small>cuisine</small></td><td><div class="cell same"><b>5</b><span>Durham 4.0 first</span></div></td><td><div class="cell up"><b>5</b><span>Midtown 4.4 first</span></div></td><td><div class="cell same"><b>5</b><span>unchanged</span></div></td></tr><tr><td>09</td><td class="qq">steakhouse<small>broad cuisine</small></td><td><div class="cell same"><b>421</b><span>names with the word lead</span></div></td><td><div class="cell up"><b>507</b><span>Steak and Brazilian Steakhouse join</span></div></td><td><div class="cell same"><b>507</b><span>unchanged</span></div></td></tr><tr><td>10</td><td class="qq">texas<small>ambiguous word</small></td><td><div class="cell same"><b>23</b><span>includes street names</span></div></td><td><div class="cell up"><b>18</b><span>restaurants only</span></div></td><td><div class="cell same"><b>18</b><span>unchanged</span></div></td></tr><tr><td>11</td><td class="qq">(empty)<small>browse, no query</small></td><td><div class="cell same"><b>5,000</b><span>San Diego, file order</span></div></td><td><div class="cell up"><b>5,000</b><span>Russell's Steaks 4.9 first</span></div></td><td><div class="cell same"><b>5,000</b><span>unchanged</span></div></td></tr><tr><td>12</td><td class="qq">vegan sushi burrito<small>no exact match</small></td><td><div class="cell same"><b>0</b><span>dead end</span></div></td><td><div class="cell same"><b>0</b><span>dead end, message only</span></div></td><td><div class="cell up"><b>194</b><span>sushi restaurants, fallback</span></div></td></tr></tbody>
+   </table>
+  </div>
+  <div class="legend"><span><i style="background:#0A8A5A"></i>Better than the run before</span><span><i style="background:#D6334C"></i>Worse</span><span><i style="background:#DDDDEB"></i>Same</span><span>Hit count, then what leads the list.</span></div>
+  <p class="small"> Responses in <code>out/baseline/</code> and <code>out/final/</code>; the after run was kept locally. Write-up in <code>prep/relevance-testing.md</code>.</p>
+ </div>
+</section>
+
+<!-- A4 FOLLOW-UP TESTS -->
+<section class="slide" data-ch="Appendix" data-title="34 follow-up queries" data-apx="1">
+ <div class="slide-in">
+  <div class="head">
+    <div class="eyebrow apx">Appendix D · Relevance tests</div>
+    <h2 class="wide">34 follow-up queries, each written to answer one question</h2>
+  </div>
+  <div class="tabs" role="tablist" aria-label="Test groups"><button class="tab" type="button" role="tab" id="t-g1" aria-controls="p-g1" aria-selected="true">Sept 19 changes<small>13 to 24</small></button><button class="tab" type="button" role="tab" id="t-g2" aria-controls="p-g2" aria-selected="false">Diagnostics<small>25 to 28</small></button><button class="tab" type="button" role="tab" id="t-g3" aria-controls="p-g3" aria-selected="false">Location<small>29 to 33</small></button><button class="tab" type="button" role="tab" id="t-g4" aria-controls="p-g4" aria-selected="false">Optional words<small>34 to 46</small></button></div>
+  <div class="tpanel" role="tabpanel" id="p-g1" aria-labelledby="t-g1"><p class="why"><b>What changed:</b> attribute order, English stop words, optional words, brazil = brasil synonym, state and payment options dropped.</p><div class="mx lg tbl"><table><thead><tr><th>#</th><th>Query</th><th>Setup</th><th style="text-align:right">Hits</th><th>What it showed</th></tr></thead><tbody><tr><td>13</td><td class="qq">brasil</td><td>synonym</td><td class="">43</td><td>Texas de Brazil · Addison first; Berimbau Do Brasil sixth</td></tr><tr><td>14</td><td class="qq">braz</td><td>prefix of the last word</td><td class="">90</td><td>Texas de Brazil · Addison first; likely brings in Brasserie</td></tr><tr><td>15</td><td class="qq">braz</td><td>filtered to Berimbau Do Brasil</td><td class="">1</td><td>Found through its cuisine, Brazilian; "braz" does not reach "brasil"</td></tr><tr><td>16</td><td class="qq">mccormick and schmicks</td><td>fallback off, stop words on</td><td class="">13</td><td>Still found</td></tr><tr><td>17</td><td class="qq">mccormick and schmicks</td><td>fallback off, stop words off</td><td class="">13</td><td>Still found</td></tr><tr><td>18</td><td class="qq">mccormick and schmicks</td><td>fallback, stop words, optional words all off</td><td class="">13</td><td>Still found: opened the question settled in 34 to 46</td></tr><tr><td>19</td><td class="qq">mccormick and schmicks</td><td>same, French stop words only</td><td class="">13</td><td>Still found</td></tr><tr><td>20</td><td class="qq">steakhouse in denver</td><td>natural phrase</td><td class="">46</td><td>Fleming's Steakhouse · Denver first</td></tr><tr><td>21</td><td class="qq">houston</td><td>city name versus restaurant name</td><td class="">232</td><td>Vic &amp; Anthony's Steakhouse · Houston first</td></tr><tr><td>22</td><td class="qq">steak denver</td><td>raw cuisine plus city</td><td class="">14</td><td>Ruth's Chris · Denver first</td></tr><tr><td>23</td><td class="qq">steakhouse tx</td><td>state abbreviation</td><td class="">508</td><td>Steakhouses from anywhere; state is not on the record</td></tr><tr><td>24</td><td class="qq">fine dining denver</td><td>dining style plus city</td><td class="">46</td><td>The Capital Grille · Denver first</td></tr></tbody></table></div></div><div class="tpanel" role="tabpanel" id="p-g2" aria-labelledby="t-g2" hidden><p class="why"><b>Why:</b> ranking info shows how many words matched, and controls isolate one setting at a time.</p><div class="mx lg tbl"><table><thead><tr><th>#</th><th>Query</th><th>Setup</th><th style="text-align:right">Hits</th><th>What it showed</th></tr></thead><tbody><tr><td>25</td><td class="qq">mccormick and schmicks</td><td>with ranking info</td><td class="">13</td><td>"and" dropped by English stop word removal</td></tr><tr><td>26</td><td class="qq">mccormick and schmicks</td><td>everything off, ranking info</td><td class="">13</td><td>2 of 3 words matched: "and" still optional</td></tr><tr><td>27</td><td class="qq">mccormick qwxz schmicks</td><td>control: made-up middle word</td><td class="z">0</td><td>A real unknown word is required</td></tr><tr><td>28</td><td class="qq">steakhouse tx</td><td>fallback off</td><td class="z">0</td><td>Confirms the 508 in query 23 come from the fallback</td></tr></tbody></table></div></div><div class="tpanel" role="tabpanel" id="p-g3" aria-labelledby="t-g3" hidden><p class="why"><b>Same parameters as the site:</b> radius all (distance reorders, never hides), 1 km precision bands.</p><div class="mx lg tbl"><table><thead><tr><th>#</th><th>Query</th><th>Setup</th><th style="text-align:right">Hits</th><th>What it showed</th></tr></thead><tbody><tr><td>29</td><td class="qq">(empty)</td><td>Times Square, 1 km bands</td><td class="">5,000</td><td>Pazza Notte 5.0, then Le Bernardin 4.7; first page within 1 km</td></tr><tr><td>30</td><td class="qq">(empty)</td><td>Weston, FL</td><td class="">5,000</td><td>Ceviche Arigato first; 4 restaurants within 25 km</td></tr><tr><td>31</td><td class="qq">(empty)</td><td>Times Square, 10 m precision</td><td class="">5,000</td><td>Bond 45 first, 25 m away: distance decides almost every order</td></tr><tr><td>32</td><td class="qq">texas de brazil</td><td>chain, from Times Square</td><td class="">10</td><td>Yonkers first; Addison, the best rated, sixth</td></tr><tr><td>33</td><td class="qq">(empty)</td><td>location from the request IP</td><td class="">5,000</td><td>Works with no prompt; Algolia returns the center it used</td></tr></tbody></table></div></div><div class="tpanel" role="tabpanel" id="p-g4" aria-labelledby="t-g4" hidden><p class="why"><b>Question:</b> why "and" stayed optional with everything switched off. <b>Answer:</b> optional words sent with a request add to the index list, they do not replace it.</p><div class="mx lg tbl"><table><thead><tr><th>#</th><th>Query</th><th>Setup</th><th style="text-align:right">Hits</th><th>What it showed</th></tr></thead><tbody><tr><td>34 to 37</td><td class="qq">mccormick [and | of | at | in] schmicks</td><td>everything off; words on the index list</td><td class="">13</td><td>Each found, 2 of 3 words matched</td></tr><tr><td>38 to 41</td><td class="qq">mccormick [for | with | on | by] schmicks</td><td>everything off; stop words not on the list</td><td class="z">0</td><td>Each required, nothing found</td></tr><tr><td>42</td><td class="qq">mccormick steak schmicks</td><td>everything off</td><td class="z">0</td><td>A real word from other records is required</td></tr><tr><td>43</td><td class="qq">mccormick steak schmicks</td><td>request makes "steak" optional</td><td class="">13</td><td>Found</td></tr><tr><td>44</td><td class="qq">mccormick for schmicks</td><td>request makes "for" optional</td><td class="">13</td><td>Found</td></tr><tr><td>45</td><td class="qq">mccormick and schmicks</td><td>request list is only "for"</td><td class="">13</td><td>"and" still optional in the same request</td></tr><tr><td>46</td><td class="qq">mccormick the schmicks</td><td>everything off</td><td class="">13</td><td>Roseville The Fountains first, it matches all 3 words</td></tr></tbody></table></div></div>
+  <p class="small">All read-only, with the search-only key. Responses in <code>out/final/</code>, <code>out/geo/</code> and <code>out/optional-words/</code>; scripts 04, 07 and 08.</p>
+ </div>
+</section>
+
+<!-- A5 FILES -->
 <section class="slide" data-ch="Appendix" data-title="What each file does" data-apx="1">
  <div class="slide-in">
   <div class="head">
-    <div class="eyebrow apx">Appendix C · The repo</div>
+    <div class="eyebrow apx">Appendix E · The repo</div>
     <h2 class="wide">Run order 01, 05, 02. Export 06 after each dashboard change.</h2>
   </div>
   <div class="files">
@@ -887,7 +950,7 @@ td{color:var(--navy)}
 <section class="slide" data-ch="Appendix" data-title="Assumptions and how to run it" data-apx="1">
  <div class="slide-in">
   <div class="head">
-    <div class="eyebrow apx">Appendix D · Assumptions and run it yourself</div>
+    <div class="eyebrow apx">Appendix F · Assumptions and run it yourself</div>
     <h2 class="wide">What I assumed about the data, and how to rebuild it</h2>
   </div>
   <div class="split" style="align-items:start">
@@ -1055,6 +1118,14 @@ td{color:var(--navy)}
     if (sx == null) return; var dx = e.changedTouches[0].clientX - sx, dy = e.changedTouches[0].clientY - sy;
     if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5){ go(cur + (dx < 0 ? 1 : -1)); } sx = null;
   }, {passive:true});
+
+  document.querySelectorAll('.tabs').forEach(function(tl){
+    var tabs = Array.prototype.slice.call(tl.querySelectorAll('.tab'));
+    function sel(t){ tabs.forEach(function(x){ var on = x === t; x.setAttribute('aria-selected', on ? 'true' : 'false'); x.tabIndex = on ? 0 : -1; document.getElementById(x.getAttribute('aria-controls')).hidden = !on; }); }
+    tabs.forEach(function(t, i){ t.tabIndex = i ? -1 : 0; t.addEventListener('click', function(){ sel(t); });
+      t.addEventListener('keydown', function(e){ if (e.key === 'ArrowRight' || e.key === 'ArrowLeft'){ e.preventDefault(); e.stopPropagation(); var n = tabs[(i + (e.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length]; sel(n); n.focus(); } }); });
+  });
+  document.querySelectorAll('[data-goto]').forEach(function(b){ b.addEventListener('click', function(){ var t = document.getElementById(b.dataset.goto); go(slides.indexOf(t)); }); });
   function fromHash(){ var m = /^#s(\d+)$/.exec(location.hash || ''); return m ? parseInt(m[1], 10) - 1 : 0; }
   window.addEventListener('hashchange', function(){ go(fromHash(), true); });
   go(fromHash(), true);
