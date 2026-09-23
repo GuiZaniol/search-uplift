@@ -1,0 +1,1064 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>OpenTable Search Uplift</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&family=Hanken+Grotesk:ital,wght@0,400;0,500;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Single deliberate light look in Algolia brand colors; every color painted explicitly. */
+:root{
+  --xenon:#003DFF; --xenon-600:#0033D6; --nebula:#5468FF; --tint:#E9EDFF; --tint-2:#F3F5FF;
+  --navy:#21243D; --navy-2:#2E3252; --ink:#21243D; --slate:#5A5E9A; --slate-2:#8A8DB8;
+  --mist:#F5F5FA; --paper:#FFFFFF; --line:#DDDDEB; --line-2:#EBEBF3;
+  --good:#0A8A5A; --good-bg:#E4F5EE; --bad:#D6334C; --bad-bg:#FCE9EC; --star:#F2A516;
+  --display:"Sora", "Avenir Next", "Segoe UI", system-ui, sans-serif;
+  --body:"Hanken Grotesk", "Helvetica Neue", "Segoe UI", system-ui, sans-serif;
+  --mono:"JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  color-scheme:light;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--mist);color:var(--ink);font:16px/1.5 var(--body);-webkit-font-smoothing:antialiased;overflow:hidden}
+a{color:var(--xenon)}
+:focus-visible{outline:3px solid var(--nebula);outline-offset:2px;border-radius:4px}
+
+/* ---------- App shell ---------- */
+.app{height:100%;display:grid;grid-template-rows:auto 1fr auto;grid-template-columns:minmax(0,1fr)}
+.topbar{display:flex;align-items:center;gap:18px;padding:12px 24px 0}
+.brand{display:flex;align-items:center;gap:10px;font:600 13px/1 var(--display);color:var(--navy);white-space:nowrap}
+.brand-mark{width:22px;height:22px;border-radius:6px;background:var(--xenon);display:grid;place-items:center}
+.brand-mark svg{width:13px;height:13px}
+.progress{flex:1;display:flex;gap:3px;align-items:center;min-width:0}
+.progress button{flex:1;height:5px;border:0;padding:0;border-radius:3px;background:var(--line);cursor:pointer;transition:background .2s}
+.progress button.done{background:var(--slate-2)}
+.progress button.now{background:var(--xenon)}
+.progress button.apx{background:var(--line-2)}
+.progress button.apx.done{background:var(--line)}
+.progress button.apx.now{background:var(--nebula)}
+.stage{position:relative;overflow:hidden}
+.slide{position:absolute;inset:0;overflow-y:auto;overflow-x:hidden;padding:28px 24px 32px}
+.slide-in{max-width:1180px;min-height:100%;margin:0 auto;display:flex;flex-direction:column;justify-content:center;gap:24px}
+.slide.active .slide-in{animation:rise .45s cubic-bezier(.2,.7,.2,1) both}
+@keyframes rise{from{opacity:.001;transform:translateY(10px)}to{opacity:1;transform:none}}
+.navbar{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 24px calc(12px + env(safe-area-inset-bottom,0px));border-top:1px solid var(--line-2);background:var(--mist)}
+.navbar .where{font:500 13px/1.2 var(--body);color:var(--slate);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.navbar .where b{color:var(--navy);font-weight:600}
+.navbtns{display:flex;gap:8px;align-items:center}
+.navbtns .count{font:500 13px var(--mono);color:var(--slate);min-width:58px;text-align:center;font-variant-numeric:tabular-nums}
+.nb{font:600 14px var(--body);border:1px solid var(--line);background:var(--paper);color:var(--navy);border-radius:999px;padding:8px 16px;cursor:pointer}
+.nb.primary{background:var(--xenon);border-color:var(--xenon);color:#fff}
+.nb:disabled{opacity:.35;cursor:default}
+.hint{font:12px var(--body);color:var(--slate-2)}
+
+/* ---------- Type ---------- */
+.eyebrow{font:600 12px/1 var(--display);letter-spacing:.12em;text-transform:uppercase;color:var(--xenon);display:flex;align-items:center;gap:10px}
+.eyebrow::before{content:"";width:18px;height:2px;background:currentColor}
+.eyebrow.apx{color:var(--nebula)}
+h1,h2,h3{font-family:var(--display);color:var(--navy);margin:0;text-wrap:balance}
+h1{font-size:clamp(34px,5.2vw,64px);line-height:1.05;font-weight:600;letter-spacing:-.025em}
+h2{font-size:clamp(26px,3.3vw,42px);line-height:1.12;font-weight:600;letter-spacing:-.02em;max-width:22ch}
+h2.wide{max-width:30ch}
+h3{font-size:16px;font-weight:600;letter-spacing:-.005em}
+.lede{font-size:clamp(16px,1.35vw,19px);color:var(--slate);max-width:62ch;margin:0}
+.lede b,.lede strong{color:var(--navy)}
+p{margin:0}
+.small{font-size:13px;color:var(--slate)}
+code,.mono{font-family:var(--mono);font-size:.88em}
+code{background:var(--tint-2);color:var(--xenon-600);padding:1px 5px;border-radius:4px}
+mark{background:rgba(84,104,255,.18);color:inherit;border-radius:2px;padding:0 1px}
+
+/* ---------- Layout helpers ---------- */
+.head{display:flex;flex-direction:column;gap:12px}
+.split{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);gap:40px;align-items:center}
+.split.even{grid-template-columns:repeat(2,minmax(0,1fr))}
+.cols3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+.panel{background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:18px}
+.panel-title{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:12px;font:600 12px/1.2 var(--display);letter-spacing:.06em;text-transform:uppercase;color:var(--slate)}
+.pill{display:inline-flex;align-items:center;gap:6px;font:600 11px/1 var(--display);letter-spacing:.06em;text-transform:uppercase;padding:5px 9px;border-radius:999px}
+.pill.before{background:var(--bad-bg);color:var(--bad)}
+.pill.after{background:var(--good-bg);color:var(--good)}
+.pill.neutral{background:var(--tint);color:var(--xenon)}
+.pill::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
+.bullets{margin:0;padding:0;list-style:none;display:grid;gap:10px}
+.bullets li{position:relative;padding-left:20px;color:var(--slate)}
+.bullets li::before{content:"";position:absolute;left:0;top:.62em;width:8px;height:8px;border-radius:2px;background:var(--nebula)}
+.bullets li b{color:var(--navy)}
+
+/* ---------- Mock search UI ---------- */
+.sui{background:var(--paper);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.sbox{display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid var(--line-2);font:500 17px var(--body);color:var(--navy)}
+.sbox svg{flex:none;width:18px;height:18px}
+.sbox .q{font-family:var(--body)}
+.caret{display:inline-block;width:2px;height:20px;background:var(--xenon);margin-left:-6px;animation:blink 1s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
+.sbox .nbh{margin-left:auto;font:500 12px var(--mono);color:var(--slate);white-space:nowrap}
+.hits{list-style:none;margin:0;padding:6px}
+.hit{display:grid;grid-template-columns:36px minmax(0,1fr) auto;gap:12px;align-items:center;padding:8px 10px;border-radius:10px}
+.hit + .hit{border-top:1px solid var(--line-2);border-radius:0}
+.av{width:36px;height:36px;border-radius:8px;display:grid;place-items:center;font:600 14px var(--display);color:var(--xenon);background:var(--tint)}
+.hit .nm{font-weight:600;color:var(--navy);line-height:1.25;overflow-wrap:anywhere}
+.hit .lc{font-weight:400;color:var(--slate)}
+.hit .lc::before{content:" · "}
+.hit .mt{font-size:12.5px;color:var(--slate);margin-top:2px}
+.rt{font:500 13px var(--mono);color:var(--navy);white-space:nowrap;text-align:right;font-variant-numeric:tabular-nums}
+.rt .s{color:var(--star)}
+.rt small{display:block;color:var(--slate-2);font-size:11px}
+.hit.bad .rt{color:var(--bad)}
+.hit.raw .nm{font-family:var(--mono);font-size:13px;font-weight:500}
+.hit.muted{opacity:.55}
+.hit.best{background:var(--good-bg);border-radius:10px}
+.hit.best .mt{color:var(--good);font-weight:600}
+.empty-state{padding:34px 16px;text-align:center;color:var(--slate)}
+.empty-state b{display:block;font:600 28px var(--display);color:var(--bad);margin-bottom:4px}
+
+/* ---------- Hero ---------- */
+.hero{display:grid;grid-template-columns:minmax(0,6fr) minmax(0,5fr);gap:48px;align-items:center}
+.hero .sub{font-size:clamp(17px,1.5vw,21px);color:var(--slate);max-width:44ch;margin-top:18px}
+.hero-links{display:flex;flex-wrap:wrap;gap:10px;margin-top:26px}
+.linkbtn{display:inline-flex;align-items:center;gap:8px;font:600 14px var(--body);text-decoration:none;padding:10px 16px;border-radius:999px;border:1px solid var(--line);background:var(--paper);color:var(--navy)}
+.linkbtn.primary{background:var(--xenon);color:#fff;border-color:var(--xenon)}
+.byline{margin-top:28px;font-size:14px;color:var(--slate)}
+.byline b{color:var(--navy)}
+.hero-note{font-size:12px;color:var(--slate-2);margin-top:10px;text-align:right}
+
+/* ---------- Personas ---------- */
+.persona{background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:22px;display:flex;flex-direction:column;gap:14px}
+.persona .who{display:flex;align-items:center;gap:12px}
+.persona .ico{width:42px;height:42px;border-radius:12px;display:grid;place-items:center;background:var(--tint)}
+.persona .ico svg{width:22px;height:22px}
+.persona .says{font:500 17px/1.4 var(--display);color:var(--navy)}
+.persona .needs{font-size:14px;color:var(--slate)}
+.goal{display:flex;align-items:center;gap:16px;background:var(--navy);color:#fff;border-radius:14px;padding:18px 22px}
+.goal .big{font:600 clamp(18px,1.8vw,24px)/1.25 var(--display)}
+.goal .lbl{font:600 11px/1 var(--display);letter-spacing:.12em;text-transform:uppercase;color:#AEB5FF;white-space:nowrap}
+
+/* ---------- Summary rows ---------- */
+.sum{display:grid;gap:0;background:var(--paper);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.sum-row{display:grid;grid-template-columns:minmax(0,4fr) minmax(0,6fr);gap:24px;padding:16px 22px;align-items:baseline}
+.sum-row + .sum-row{border-top:1px solid var(--line-2)}
+.sum-row h3{font-size:clamp(15px,1.3vw,18px)}
+.sum-row p{color:var(--slate);font-size:15px}
+.sum-row.next{background:var(--tint-2)}
+.sum-row.next h3{color:var(--xenon)}
+
+/* ---------- Query chips ---------- */
+.qtrio{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+.qcard{background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:12px}
+.qchip{align-self:flex-start;font:500 15px var(--mono);background:var(--mist);border:1px solid var(--line);padding:6px 10px;border-radius:8px;color:var(--navy)}
+.qkind{font:600 11px/1 var(--display);letter-spacing:.08em;text-transform:uppercase;color:var(--slate)}
+.arrow-d{color:var(--slate-2);font-size:18px;line-height:1}
+.qres{font:600 16px var(--display);color:var(--navy)}
+.qres small{display:block;font:400 13px var(--body);color:var(--slate);margin-top:2px}
+.callout{display:flex;gap:12px;align-items:flex-start;background:var(--tint-2);border:1px solid #D5DCFF;border-radius:12px;padding:14px 16px;color:var(--navy);font-size:15px}
+.callout svg{flex:none;width:20px;height:20px;margin-top:1px}
+
+/* ---------- Data slide ---------- */
+.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.stat{background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+.stat .n{font:600 clamp(26px,2.6vw,34px)/1 var(--display);color:var(--xenon);letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.stat .l{font-size:13.5px;color:var(--slate);margin-top:6px;line-height:1.35}
+.rec{display:grid;grid-template-columns:minmax(0,1fr) 28px minmax(0,1fr);gap:10px;align-items:stretch}
+.rec pre{margin:0;font:12.5px/1.65 var(--mono);background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:14px;overflow-x:auto;color:var(--navy)}
+.rec .mid{display:grid;place-items:center;color:var(--xenon);font-size:20px}
+.k{color:var(--slate)}
+.del{color:var(--bad);text-decoration:line-through;text-decoration-thickness:1px}
+.add{background:var(--good-bg);color:var(--good);border-radius:3px}
+.rec .cap{font:600 11px var(--display);letter-spacing:.08em;text-transform:uppercase;color:var(--slate);margin-bottom:6px;display:block}
+
+/* ---------- Pipeline ---------- */
+.pipe{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;align-items:stretch;position:relative}
+.step{background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:6px;position:relative}
+.step .sn{font:500 11.5px var(--mono);color:var(--xenon)}
+.step h3{font-size:15px}
+.step p{font-size:13px;color:var(--slate);line-height:1.4}
+.step.hl{background:var(--navy);border-color:var(--navy)}
+.step.hl h3{color:#fff}.step.hl p{color:#C9CCE8}.step.hl .sn{color:#AEB5FF}
+.step:not(:last-child)::after{content:"";position:absolute;right:-9px;top:50%;width:8px;height:8px;border-top:2px solid var(--slate-2);border-right:2px solid var(--slate-2);transform:translateY(-50%) rotate(45deg);z-index:1}
+
+/* ---------- Cuisine mapping ---------- */
+.map{display:grid;gap:8px}
+.map-row{display:grid;grid-template-columns:minmax(0,1fr) 24px minmax(0,1.2fr);gap:8px;align-items:center}
+.raw{font:500 13px var(--mono);background:var(--mist);border:1px dashed var(--slate-2);color:var(--navy);padding:7px 10px;border-radius:8px}
+.to{color:var(--xenon);text-align:center}
+.tags{display:flex;flex-wrap:wrap;gap:6px}
+.tag{font:600 12.5px var(--body);padding:5px 10px;border-radius:999px;background:var(--tint);color:var(--xenon)}
+.tag.parent{background:var(--xenon);color:#fff}
+.bignum{display:flex;align-items:baseline;gap:10px;font-family:var(--display);color:var(--navy)}
+.bignum .from{font-size:22px;color:var(--slate-2);text-decoration:line-through;text-decoration-thickness:2px}
+.bignum .toN{font-size:40px;font-weight:600;color:var(--xenon);letter-spacing:-.02em}
+.bignum .lab{font:500 14px var(--body);color:var(--slate)}
+
+/* ---------- Geo ---------- */
+.geo-grid{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,6fr);gap:28px;align-items:center}
+.geo-svg{width:100%;max-width:420px;height:auto;display:block;margin:0 auto}
+.rank2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.mini{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+.mini li{display:grid;grid-template-columns:18px minmax(0,1fr) auto;gap:8px;align-items:baseline;font-size:14px}
+.mini .i{font:500 12px var(--mono);color:var(--slate-2)}
+.mini .n{color:var(--navy);font-weight:600;overflow-wrap:anywhere}
+.mini .d{font:500 12px var(--mono);color:var(--slate);white-space:nowrap;text-align:right}
+.mini .d .s{color:var(--star)}
+.rules{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.rule{background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:14px}
+.rule code{font-size:12px}
+.rule p{font-size:13.5px;color:var(--slate);margin-top:6px}
+.rule h3{font-size:14.5px}
+
+/* ---------- Config ---------- */
+.crit{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.crit span{font:500 13px var(--mono);padding:6px 10px;border-radius:8px;background:var(--mist);border:1px solid var(--line);color:var(--navy)}
+.crit span.on{background:var(--xenon);border-color:var(--xenon);color:#fff}
+.crit i{color:var(--slate-2);font-style:normal}
+.tiers{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+.tiers li{display:grid;grid-template-columns:26px minmax(0,1fr);gap:10px;align-items:center}
+.tiers .r{font:600 12px var(--mono);color:#fff;background:var(--navy);border-radius:6px;height:26px;display:grid;place-items:center}
+.tiers .v{font:500 13px var(--mono);color:var(--navy);background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:5px 10px;overflow-wrap:anywhere}
+.tiers li.u .r{background:var(--slate-2)}
+.tiers li.u .v{color:var(--slate)}
+.kv{display:grid;grid-template-columns:auto minmax(0,1fr);gap:8px 14px;font-size:14px;align-items:baseline}
+.kv dt{font:600 12px var(--display);letter-spacing:.04em;text-transform:uppercase;color:var(--slate);white-space:nowrap}
+.kv dd{margin:0;color:var(--navy)}
+
+/* ---------- Testing ---------- */
+.timeline{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:0;position:relative}
+.tl{padding:0 10px 0 0;position:relative}
+.tl .dot{width:14px;height:14px;border-radius:50%;background:var(--paper);border:3px solid var(--xenon);position:relative;z-index:1}
+.tl::before{content:"";position:absolute;left:7px;right:0;top:6px;height:2px;background:var(--line)}
+.tl:last-child::before{display:none}
+.tl .qn{font:600 26px/1 var(--display);color:var(--navy);margin-top:12px;font-variant-numeric:tabular-nums}
+.tl .qn small{font:500 12px var(--body);color:var(--slate);margin-left:4px}
+.tl h3{font-size:14px;margin-top:6px}
+.tl p{font-size:13px;color:var(--slate);margin-top:2px;line-height:1.4}
+.bars{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;align-items:end;height:170px;padding-top:10px;border-bottom:2px solid var(--line)}
+.bar{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:6px;height:100%}
+.bar .v{font:600 20px var(--display);color:var(--navy);font-variant-numeric:tabular-nums}
+.bar .b{width:56%;max-width:70px;border-radius:6px 6px 0 0;background:var(--xenon)}
+.bar.zero .b{background:var(--bad);height:3px!important;border-radius:2px}
+.bar.zero .v{color:var(--bad)}
+.barlbl{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-top:8px}
+.barlbl span{font-size:12.5px;color:var(--slate);text-align:center;line-height:1.35}
+
+/* ---------- Next steps ---------- */
+.ns{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;align-items:start}
+.nscol{background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:18px}
+.nscol.go{background:var(--navy);border-color:var(--navy)}
+.nscol h3{display:flex;justify-content:space-between;align-items:baseline;font-size:16px;margin-bottom:12px}
+.nscol h3 span{font:500 12px var(--mono);color:var(--slate)}
+.nscol.go h3{color:#fff}.nscol.go h3 span{color:#AEB5FF}
+.nscol ol{margin:0;padding:0;list-style:none;display:grid;gap:8px}
+.nscol li{font-size:14px;color:var(--navy);padding-left:14px;position:relative;line-height:1.35}
+.nscol li::before{content:"";position:absolute;left:0;top:.5em;width:6px;height:6px;border-radius:50%;background:var(--nebula)}
+.nscol.go li{color:#E6E8FF}
+.nscol.go li:first-child{color:#fff;font-weight:600}
+.nscol.go li::before{background:#AEB5FF}
+.gap-banner{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.gb{border-radius:12px;padding:14px 16px;display:flex;gap:10px;align-items:center;font:500 15px var(--body)}
+.gb.yes{background:var(--good-bg);color:var(--good)}
+.gb.no{background:var(--bad-bg);color:var(--bad)}
+.gb b{font-family:var(--display)}
+
+/* ---------- Close ---------- */
+.close{background:var(--navy);color:#fff;border-radius:18px;padding:clamp(24px,4vw,48px);display:grid;grid-template-columns:minmax(0,6fr) minmax(0,5fr);gap:36px;align-items:center}
+.close h2{color:#fff;max-width:18ch}
+.close p{color:#C9CCE8;margin-top:12px;max-width:48ch}
+.try{display:grid;gap:8px}
+.try div{display:flex;justify-content:space-between;gap:12px;align-items:center;background:var(--navy-2);border-radius:10px;padding:10px 14px}
+.try code{background:transparent;color:#fff;font-size:14px;padding:0}
+.try span{font-size:13px;color:#AEB5FF;text-align:right}
+.close .linkbtn{background:#fff;color:var(--navy);border-color:#fff}
+.close .linkbtn.ghost{background:transparent;color:#fff;border-color:#5A5E9A}
+
+/* ---------- Appendix tables ---------- */
+.tbl{overflow-x:auto;background:var(--paper);border:1px solid var(--line);border-radius:12px}
+table{border-collapse:collapse;width:100%;font-size:13.5px}
+th,td{text-align:left;padding:8px 12px;border-bottom:1px solid var(--line-2);vertical-align:top}
+th{font:600 11px var(--display);letter-spacing:.06em;text-transform:uppercase;color:var(--slate);background:var(--mist)}
+tr:last-child td{border-bottom:0}
+td:first-child{font-family:var(--mono);font-size:12.5px;color:var(--xenon-600);white-space:nowrap}
+td{color:var(--navy)}
+.files{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.fgroup h3{font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--slate);margin-bottom:8px}
+.fitem{background:var(--paper);border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:8px}
+.fitem code{font-size:12px}
+.fitem p{font-size:13px;color:var(--slate);margin-top:4px;line-height:1.4}
+.term{background:var(--navy);color:#E6E8FF;border-radius:12px;padding:18px;font:13.5px/1.8 var(--mono);overflow-x:auto;white-space:pre;margin:0}
+.term .c{color:#8A8DB8}
+.term .p{color:#AEB5FF}
+.assume{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.assume .panel p{font-size:14.5px;color:var(--slate);margin-top:6px}
+.assume .panel h3{font-size:15px}
+
+/* ---------- Responsive ---------- */
+@media (max-width: 980px){
+  .hero,.split,.split.even,.geo-grid,.close{grid-template-columns:minmax(0,1fr)}
+  .pipe{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .step:not(:last-child)::after{display:none}
+  .stats{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .timeline{grid-template-columns:repeat(2,minmax(0,1fr));row-gap:20px}
+  .ns,.cols3,.rules,.files{grid-template-columns:minmax(0,1fr)}
+  .slide-in{justify-content:flex-start}
+}
+@media (max-width: 640px){
+  .topbar,.navbar{padding-left:16px;padding-right:16px}
+  .slide{padding:20px 16px 28px}
+  .qtrio,.rank2,.assume,.gap-banner{grid-template-columns:minmax(0,1fr)}
+  .rec{grid-template-columns:minmax(0,1fr)}
+  .rec .mid{transform:rotate(90deg);height:24px}
+  .sum-row{grid-template-columns:minmax(0,1fr);gap:4px}
+  .hint,.brand span{display:none}
+  .nb{padding:8px 12px}
+  .timeline{grid-template-columns:minmax(0,1fr)}
+  .tl::before{display:none}
+}
+@media (prefers-reduced-motion: reduce){
+  .slide.active .slide-in{animation:none}
+  .caret{animation:none}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="topbar">
+    <div class="brand"><span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 16 16" fill="none"><circle cx="7" cy="7" r="4.6" stroke="#fff" stroke-width="2"/><path d="M10.5 10.5 14 14" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg></span><span>Search Uplift</span></div>
+    <nav class="progress" id="progress" aria-label="Screens"></nav>
+  </header>
+
+  <main class="stage" id="stage">
+
+<!-- 1 TITLE -->
+<section class="slide" data-ch="Intro" data-title="OpenTable search on Algolia">
+ <div class="slide-in">
+  <div class="hero">
+   <div>
+    <div class="eyebrow">Algolia SE assignment · OpenTable prototype</div>
+    <h1 style="margin-top:18px">Restaurant search that ends in a booking</h1>
+    <p class="sub">A search and discovery prototype for OpenTable, built on Algolia with the 5,000 restaurants from the assignment.</p>
+    <div class="hero-links">
+      <a class="linkbtn primary" href="https://guizaniol.github.io/search-uplift/site/" target="_blank" rel="noopener">Open the live demo</a>
+      <a class="linkbtn" href="https://github.com/GuiZaniol/search-uplift" target="_blank" rel="noopener">Code on GitHub</a>
+    </div>
+    <p class="byline"><b>Gui Zaniol</b> · September 2026</p>
+   </div>
+   <div>
+    <div class="sui" aria-label="Example searches from the prototype">
+      <div class="sbox"><svg viewBox="0 0 20 20" fill="none"><circle cx="8.5" cy="8.5" r="6" stroke="#003DFF" stroke-width="2"/><path d="M13 13l5 5" stroke="#003DFF" stroke-width="2" stroke-linecap="round"/></svg><span class="q" id="heroQ">benihanna</span><span class="caret" aria-hidden="true"></span><span class="nbh" id="heroN">24 results</span></div>
+      <ol class="hits" id="heroHits"></ol>
+    </div>
+    <p class="hero-note" id="heroNote">Real responses from the final index. Typo in the query, right restaurant first.</p>
+   </div>
+  </div>
+ </div>
+</section>
+
+<!-- 2 GOAL -->
+<section class="slide" data-ch="Intro" data-title="The goal and two diners">
+ <div class="slide-in">
+  <div class="head">
+    <div class="eyebrow">The brief</div>
+    <h2>OpenTable wants more search sessions to end in a booking</h2>
+    <p class="lede">Its discovery notes describe two diners. The prototype was built around both.</p>
+  </div>
+  <div class="split even">
+    <div class="persona">
+      <div class="who"><span class="ico"><svg viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="6.5" stroke="#003DFF" stroke-width="2"/><path d="M16 16l5 5" stroke="#003DFF" stroke-width="2" stroke-linecap="round"/></svg></span><h3>The diner who knows the restaurant</h3></div>
+      <p class="says"><span class="qchip">ruths chris denver</span></p>
+      <p class="needs">Names are hard to spell, and chains have several locations in one city. Success is the right location on the first try.</p>
+    </div>
+    <div class="persona">
+      <div class="who"><span class="ico"><svg viewBox="0 0 24 24" fill="none"><path d="M12 21s7-6.2 7-11.5A7 7 0 0 0 5 9.5C5 14.8 12 21 12 21Z" stroke="#003DFF" stroke-width="2"/><circle cx="12" cy="9.5" r="2.5" stroke="#003DFF" stroke-width="2"/></svg></span><h3>The diner who is exploring</h3></div>
+      <p class="says"><span class="qchip">(empty box)</span> + Mexican + $30 and under</p>
+      <p class="needs">No name in mind yet. Success is a short, trustworthy list to browse and narrow.</p>
+    </div>
+  </div>
+  <div class="goal"><span class="lbl">Metric that matters</span><span class="big">Search to booking. Better results are the means, not the end.</span></div>
+ </div>
+</section>
+
+<!-- 3 SUMMARY -->
+<section class="slide" data-ch="Intro" data-title="Summary">
+ <div class="slide-in">
+  <div class="head">
+    <div class="eyebrow">Summary</div>
+    <h2 class="wide">What changes, in five lines</h2>
+  </div>
+  <div class="sum">
+    <div class="sum-row"><h3>Diners who know the restaurant find it on the first try</h3><p>Misspelled, run-together and partial names work. A chain's locations are labeled; the best rated comes first.</p></div>
+    <div class="sum-row"><h3>Diners who are exploring can browse before they type</h3><p>The page opens on top rated restaurants nearby. Cuisine, price, dining style and city narrow the list.</p></div>
+    <div class="sum-row"><h3>Results start local</h3><p>Ranked by distance from the diner's approximate location, no permission prompt. Distance reorders, never hides.</p></div>
+    <div class="sum-row"><h3>Most of the gain came from reshaping the data</h3><p>Algolia handled typos with its defaults. The data held search back; a repeatable script fixes it before indexing.</p></div>
+    <div class="sum-row next"><h3>Next: connect search to bookings</h3><p>The prototype shows better results, not yet more bookings. Next phase: click and conversion tracking, then A/B tests.</p></div>
+  </div>
+ </div>
+</section>
+
+<!-- 4 KNOWN ITEM -->
+<section class="slide" data-ch="Diner who knows" data-title="First try, with typos">
+ <div class="slide-in">
+  <div class="head">
+    <div class="eyebrow">Diner who knows the restaurant</div>
+    <h2>Misspelled, run-together or partial: the right restaurant comes back</h2>
+  </div>
+  <div class="qtrio">
+    <div class="qcard"><span class="qkind">Misspelled</span><span class="qchip">benihanna</span><span class="arrow-d" aria-hidden="true">↓</span><p class="qres"><mark>Benihana</mark><small>24 results, every one a Benihana location</small></p></div>
+    <div class="qcard"><span class="qkind">Run together</span><span class="qchip">meltingpot</span><span class="arrow-d" aria-hidden="true">↓</span><p class="qres">The <mark>Melting Pot</mark><small>26 results, every one a Melting Pot</small></p></div>
+    <div class="qcard"><span class="qkind">Partial</span><span class="qchip">ruths</span><span class="arrow-d" aria-hidden="true">↓</span><p class="qres"><mark>Ruth's</mark> Chris Steak House<small>35 results, Ruth's Chris at the top</small></p></div>
+  </div>
+  <div class="callout"><svg viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="8" stroke="#003DFF" stroke-width="2"/><path d="M10 9v5M10 6.2v.1" stroke="#003DFF" stroke-width="2" stroke-linecap="round"/></svg><p><b>This worked on the first run with Algolia's defaults</b> (typo tolerance, word splitting, prefix matching). Nothing to fix here, so the effort went to what the defaults could not solve: the data.</p></div>
+ </div>
+</section>
+
+<!-- 5 CHAINS -->
+<section class="slide" data-ch="Diner who knows" data-title="Chains, best location first">
+ <div class="slide-in">
+  <div class="head">
+    <div class="eyebrow">Diner who knows the restaurant</div>
+    <h2>A chain's locations are labeled, and the best rated comes first</h2>
+    <p class="lede">Query <code>cyclone anayas</code>: five Houston locations that match the text equally. Before, nothing broke the tie.</p>
+  </div>
+  <div class="split even">
+    <div class="sui">
+      <div class="sbox"><span class="pill before">Before · untuned</span><span class="nbh">5 results</span></div>
+      <ol class="hits" id="cyBefore"></ol>
+    </div>
+    <div class="sui">
+      <div class="sbox"><span class="pill after">After · quality score</span><span class="nbh">5 results</span></div>
+      <ol class="hits" id="cyAfter"></ol>
+    </div>
+  </div>
+  <p class="small">Before: brand and location sat in one name string (note the double space in "Durham"). After: <code>brand</code> and <code>location_label</code> are separate fields, and a quality score breaks the tie.</p>
+ </div>
+</section>
+
+<!-- 6 BROWSE -->
+<section class="slide" data-ch="Diner who explores" data-title="Browse before typing">
+ <div class="slide-in">
+  <div class="head">
+    <div class="eyebrow">Diner who is exploring</div>
+    <h2>The empty search box became a browse screen</h2>
+    <p class="lede">Same request, no query. Before, the index order. After, <b>top rated near you</b>, here from Times Square.</p>
+  </div>
+  <div class="split even">
+    <div class="sui">
+      <div class="sbox"><span class="pill before">Before · empty query</span><span class="nbh">5,000 results</span></div>
+      <ol class="hits" id="emBefore"></ol>
+    </div>
+    <div class="sui">
+      <div class="sbox"><span class="pill after">After · Top rated near you</span><span class="nbh">5,000 results</span></div>
+      <ol class="hits" id="emAfter"></ol>
+    </div>
+  </div>
+  <p class="small">Before: three San Diego restaurants, then Indianapolis, in the order the file happened to load. After: every first page result within 1 km of the diner, ordered by quality inside that band.</p>
+ </div>
+</section>
+
+<!-- 7 CUISINE -->
+<section class="slide" data-ch="Diner who explores" data-title="Filters that behave">
+ <div class="slide-in">
+  <div class="split">
+   <div class="head">
+    <div class="eyebrow">Diner who is exploring</div>
+    <h2>Filters a diner can trust: choose Mexican, get Tex-Mex too</h2>
+    <p class="lede">Cuisine came as one text field with <b>114 values</b>: compounds, near duplicates, no hierarchy. It is now a list with parent groups.</p>
+    <ul class="bullets" style="margin-top:6px">
+      <li><b>Filters:</b> cuisine, price, dining style, city. Cuisine and city lists are searchable.</li>
+      <li><b>On a phone:</b> one column, filters behind one button.</li>
+      <li><b>Shareable:</b> query and filters live in the URL.</li>
+    </ul>
+   </div>
+   <div style="display:grid;gap:16px">
+    <div class="panel">
+      <div class="panel-title"><span>Raw label</span><span>Cleaned, with parent group</span></div>
+      <div class="map">
+        <div class="map-row"><span class="raw">Tex-Mex</span><span class="to">→</span><span class="tags"><span class="tag">Tex-Mex</span><span class="tag parent">Mexican</span></span></div>
+        <div class="map-row"><span class="raw">Mexican / Southwestern</span><span class="to">→</span><span class="tags"><span class="tag parent">Mexican</span><span class="tag">Southwestern</span></span></div>
+        <div class="map-row"><span class="raw">Traditional Mexican</span><span class="to">→</span><span class="tags"><span class="tag">Traditional Mexican</span><span class="tag parent">Mexican</span></span></div>
+        <div class="map-row"><span class="raw">Steak</span><span class="to">→</span><span class="tags"><span class="tag parent">Steakhouse</span></span></div>
+        <div class="map-row"><span class="raw">Brazilian Steakhouse</span><span class="to">→</span><span class="tags"><span class="tag">Brazilian Steakhouse</span><span class="tag parent">Steakhouse</span></span></div>
+      </div>
+    </div>
+    <div class="split even" style="gap:16px">
+      <div class="panel"><div class="panel-title">Mexican filter</div><div class="bignum"><span class="from">90</span><span class="toN">138</span><span class="lab">restaurants</span></div></div>
+      <div class="panel"><div class="panel-title">Query "steakhouse"</div><div class="bignum"><span class="from">421</span><span class="toN">507</span><span class="lab">results</span></div></div>
+    </div>
+   </div>
+  </div>
+ </div>
+</section>
+
+<!-- 8 LOCATION -->
+<section class="slide" data-ch="Location" data-title="Results start local">
+ <div class="slide-in">
+  <div class="head">
+    <div class="eyebrow">Location, for both diners</div>
+    <h2 class="wide">Results start local. Distance changes the order, never hides a result.</h2>
+  </div>
+  <div class="geo-grid">
+    <figure style="margin:0">
+      <svg class="geo-svg" viewBox="0 0 380 380" role="img" aria-label="First page from Times Square: all results inside the 1 kilometer band">
+        <rect x="0" y="0" width="380" height="380" fill="#FFFFFF" rx="14"/>
+        <circle cx="190" cy="190" r="150" fill="#E9EDFF" stroke="#5468FF" stroke-width="1.5" stroke-dasharray="4 4"/>
+        <circle cx="190" cy="190" r="75" fill="none" stroke="#C9D2FF" stroke-width="1"/>
+        <text x="190" y="30" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="11" fill="#5468FF">1 km band: tied on distance</text>
+        <text x="190" y="108" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="10" fill="#8A8DB8">500 m</text>
+        <!-- to scale: 1 km = 150 px; bearing illustrative -->
+        <circle cx="226.5" cy="126.8" r="6" fill="#003DFF"/><text x="236" y="123" font-family="Hanken Grotesk, sans-serif" font-size="12.5" font-weight="600" fill="#21243D">Le Bernardin 4.7</text>
+        <circle cx="57.4" cy="144.6" r="6" fill="#003DFF"/><text x="68" y="140" font-family="Hanken Grotesk, sans-serif" font-size="12.5" font-weight="600" fill="#21243D">Pazza Notte 5.0</text>
+        <circle cx="167.3" cy="319" r="6" fill="#003DFF"/><text x="178" y="323" font-family="Hanken Grotesk, sans-serif" font-size="12.5" font-weight="600" fill="#21243D">PizzArte 4.5</text>
+        <circle cx="142.4" cy="217.5" r="5" fill="#5468FF"/><text x="84" y="236" font-family="Hanken Grotesk, sans-serif" font-size="12" fill="#5A5E9A">Oceana 4.4</text>
+        <circle cx="193" cy="194" r="4.5" fill="#D6334C"/><text x="202" y="208" font-family="Hanken Grotesk, sans-serif" font-size="12" fill="#D6334C">Bond 45 4.1 · 25 m</text>
+        <circle cx="190" cy="190" r="8" fill="none" stroke="#21243D" stroke-width="2"/><circle cx="190" cy="190" r="2.5" fill="#21243D"/>
+        <text x="190" y="176" text-anchor="middle" font-family="Sora, sans-serif" font-size="11" font-weight="600" fill="#21243D">Times Square</text>
+        <text x="190" y="366" text-anchor="middle" font-family="Hanken Grotesk, sans-serif" font-size="10.5" fill="#8A8DB8">Distance to scale, direction illustrative</text>
+      </svg>
+    </figure>
+    <div style="display:grid;gap:14px">
+      <div class="rank2">
+        <div class="panel"><div class="panel-title"><span>10 m precision</span><span class="pill before">distance wins</span></div>
+          <ol class="mini"><li><span class="i">1</span><span class="n">Bond 45</span><span class="d">25 m · <span class="s">★</span>4.1</span></li><li><span class="i">2</span><span class="n">Crossroads</span><span class="d">45 m · <span class="s">★</span>3.9</span></li><li><span class="i">3</span><span class="n">O'Lunney's</span><span class="d">110 m · <span class="s">★</span>4.2</span></li></ol></div>
+        <div class="panel"><div class="panel-title"><span>1 km bands</span><span class="pill after">quality wins</span></div>
+          <ol class="mini"><li><span class="i">1</span><span class="n">Pazza Notte</span><span class="d">884 m · <span class="s">★</span>5.0</span></li><li><span class="i">2</span><span class="n">Le Bernardin</span><span class="d">487 m · <span class="s">★</span>4.7</span></li><li><span class="i">3</span><span class="n">PizzArte</span><span class="d">873 m · <span class="s">★</span>4.5</span></li></ol></div>
+      </div>
+      <div class="rules">
+        <div class="rule"><h3>Start from IP</h3><code>aroundLatLngViaIP</code><p>Approximate location, no prompt. One tap for exact position.</p></div>
+        <div class="rule"><h3>Never filter</h3><code>aroundRadius: "all"</code><p>Weston, FL has 4 restaurants within 25 km. A radius would leave it empty.</p></div>
+        <div class="rule"><h3>Rating inside a band</h3><code>aroundPrecision: 1000</code><p>Same 1 km band counts as equally close; quality decides.</p></div>
+      </div>
+    </div>
+  </div>
+ </div>
+</section>
+
+<!-- 9 GEO TRADEOFF -->
+<section class="slide" data-ch="Location" data-title="A trade-off, stated">
+ <div class="slide-in">
+  <div class="split">
+   <div class="head">
+    <div class="eyebrow">Location · known trade-off</div>
+    <h2>Distance ranks before quality. For a far-away chain, nearest comes first.</h2>
+    <p class="lede">Geo sits ahead of custom ranking in Algolia's order. Searching a chain from another state lists locations by distance, not by rating.</p>
+    <p class="lede"><b>Fix on the next steps list:</b> precision that widens with distance, so far-away results are ordered by rating again.</p>
+   </div>
+   <div class="sui">
+     <div class="sbox"><svg viewBox="0 0 20 20" fill="none"><circle cx="8.5" cy="8.5" r="6" stroke="#003DFF" stroke-width="2"/><path d="M13 13l5 5" stroke="#003DFF" stroke-width="2" stroke-linecap="round"/></svg><span class="q">texas de brazil</span><span class="nbh">from Times Square · 10 results</span></div>
+     <ol class="hits" id="tdb"></ol>
+   </div>
+  </div>
+ </div>
+</section>
+
+<!-- 10 DATA -->
+<section class="slide" data-ch="Data" data-title="The data was the bottleneck">
+ <div class="slide-in">
+  <div class="head">
+    <div class="eyebrow">How it was built</div>
+    <h2 class="wide">Most of the improvement came from reshaping the data, not from tuning</h2>
+  </div>
+  <div class="stats">
+    <div class="stat"><div class="n">1,086</div><div class="l">names split into brand and location label</div></div>
+    <div class="stat"><div class="n">114</div><div class="l">inconsistent cuisine labels, rebuilt as a list with parent groups</div></div>
+    <div class="stat"><div class="n">220</div><div class="l">restaurants where the two price fields disagree. The text wins.</div></div>
+    <div class="stat"><div class="n">8 of 22</div><div class="l">source fields left out: nothing searched, filtered, ranked or shown</div></div>
+  </div>
+  <div class="rec">
+    <div><span class="cap">Source record, joined</span>
+<pre><span class="k">"name":</span> <span class="del">"Cyclone Anaya's - Midtown"</span>
+<span class="k">"food_type":</span> <span class="del">"Tex-Mex"</span>
+<span class="k">"price":</span> <span class="del">2</span>
+<span class="k">"price_range":</span> "$30 and under"
+<span class="k">"stars_count":</span> 4.4
+<span class="k">"reviews_count":</span> 22
+<span class="k">"state":</span> <span class="del">"TX"</span>  <span class="k">"postal_code":</span> <span class="del">"77002"</span>
+<span class="k">"payment_options":</span> <span class="del">[4 cards]</span></pre></div>
+    <div class="mid" aria-hidden="true">→</div>
+    <div><span class="cap">On the index</span>
+<pre><span class="k">"brand":</span> <span class="add">"Cyclone Anaya's"</span>
+<span class="k">"location_label":</span> <span class="add">"Midtown"</span>
+<span class="k">"cuisines":</span> <span class="add">["Tex-Mex", "Mexican"]</span>
+<span class="k">"price_label":</span> "$30 and under"
+<span class="k">"price_band":</span> <span class="add">1</span>
+<span class="k">"rating":</span> 4.4  <span class="k">"reviews_count":</span> 22
+<span class="k">"quality_score":</span> <span class="add">4.33</span>
+<span class="k">"_geoloc":</span> { lat, lng }</pre></div>
+  </div>
+  <p class="small">Quality score: each rating is pulled toward the dataset average (4.29) until the restaurant has enough reviews to speak for itself. A 4.4 from 22 reviews scores 4.33.</p>
+ </div>
+</section>
+
+<!-- 11 PIPELINE -->
+<section class="slide" data-ch="Data" data-title="Repeatable pipeline">
+ <div class="slide-in">
+  <div class="head">
+    <div class="eyebrow">How it was built</div>
+    <h2 class="wide">A repeatable preparation script, then a front end small enough to explain line by line</h2>
+  </div>
+  <div class="pipe">
+    <div class="step"><span class="sn">source</span><h3>Two files</h3><p>restaurants_list.json (15 fields) and restaurants_info.csv (8 fields), same 5,000 restaurants.</p></div>
+    <div class="step"><span class="sn">01-merge</span><h3>Join</h3><p>On objectID. Stops if any ID is missing from either file. Numbers typed as numbers.</p></div>
+    <div class="step hl"><span class="sn">05-transform</span><h3>Reshape</h3><p>Split names, group cuisines, one price, quality score. 19 fields per record.</p></div>
+    <div class="step"><span class="sn">02-index</span><h3>Upload</h3><p>5 batches of 1,000. Whole record replaced, so reruns are safe.</p></div>
+    <div class="step"><span class="sn">site/</span><h3>Search page</h3><p>InstantSearch.js from a CDN. Three files, no build step, GitHub Pages.</p></div>
+  </div>
+  <div class="split even" style="gap:16px">
+    <div class="callout"><svg viewBox="0 0 20 20" fill="none"><path d="M4 10.5l4 4 8-9" stroke="#003DFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><p><b>Why this scope.</b> The provided starter used Parcel 1 and Node 9. A plain page with nothing to compile was less to break on deploy day.</p></div>
+    <div class="callout"><svg viewBox="0 0 20 20" fill="none"><path d="M4 10.5l4 4 8-9" stroke="#003DFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><p><b>Left for later, not half built:</b> sorting, natural language search, click analytics.</p></div>
+  </div>
+ </div>
+</section>
+
+<!-- 12 CONFIG -->
+<section class="slide" data-ch="Relevance" data-title="Index configuration">
+ <div class="slide-in">
+  <div class="head">
+    <div class="eyebrow">Index configuration</div>
+    <h2 class="wide">A name match beats a cuisine match, which beats a place. Quality breaks ties.</h2>
+  </div>
+  <div class="split even" style="align-items:start">
+    <div class="panel">
+      <div class="panel-title"><span>Searchable attributes, in order</span></div>
+      <ol class="tiers">
+        <li><span class="r">1</span><span class="v">name, brand</span></li>
+        <li><span class="r">2</span><span class="v">cuisines, food_type_raw</span></li>
+        <li><span class="r">3</span><span class="v">city, neighborhood, area</span></li>
+        <li><span class="r">4</span><span class="v">dining_style</span></li>
+        <li class="u"><span class="r">5</span><span class="v">unordered(name)</span></li>
+        <li class="u"><span class="r">6</span><span class="v">unordered(cuisines)</span></li>
+        <li class="u"><span class="r">7</span><span class="v">unordered(city)</span></li>
+      </ol>
+      <p class="small" style="margin-top:12px">Order set from using the live OpenTable site to reach specific restaurants and chain locations. Search data would inform a better one.</p>
+    </div>
+    <div style="display:grid;gap:14px">
+      <div class="panel">
+        <div class="panel-title"><span>Ranking criteria (Algolia default order)</span></div>
+        <div class="crit"><span>typo</span><i>›</i><span>geo</span><i>›</i><span>words</span><i>›</i><span>filters</span><i>›</i><span>proximity</span><i>›</i><span>attribute</span><i>›</i><span>exact</span><i>›</i><span class="on">custom</span></div>
+        <p class="small" style="margin-top:10px">Custom: <code>desc(quality_score)</code>, then <code>desc(reviews_count)</code></p>
+      </div>
+      <div class="panel">
+        <dl class="kv">
+          <dt>Facets</dt><dd>cuisines, city (searchable), price_label, dining_style, neighborhood</dd>
+          <dt>Typos</dt><dd>Default: 1 from 4 letters, 2 from 8</dd>
+          <dt>Stop words</dt><dd>English, removed from the query</dd>
+          <dt>Optional</dt><dd>and, the, of, in, at</dd>
+          <dt>Synonym</dt><dd>brazil = brasil</dd>
+          <dt>No results</dt><dd><code>removeWordsIfNoResults: allOptional</code></dd>
+        </dl>
+      </div>
+      <p class="small">Set by hand in the Algolia dashboard. Read-only export in <code>config/index-settings.json</code>.</p>
+    </div>
+  </div>
+ </div>
+</section>
+
+<!-- 13 NO DEAD ENDS -->
+<section class="slide" data-ch="Relevance" data-title="No dead ends">
+ <div class="slide-in">
+  <div class="head">
+    <div class="eyebrow">Relevance</div>
+    <h2>A search with no exact match still gives the diner somewhere to go</h2>
+    <p class="lede">Query <code>vegan sushi burrito</code>. When the full query finds nothing, every word becomes optional.</p>
+  </div>
+  <div class="split even">
+    <div class="sui">
+      <div class="sbox"><span class="pill before">Before</span><span class="nbh">0 results</span></div>
+      <div class="empty-state"><b>0</b>No restaurants found. No way forward.</div>
+    </div>
+    <div class="sui">
+      <div class="sbox"><span class="pill after">After</span><span class="nbh">194 results</span></div>
+      <ol class="hits" id="vsb"></ol>
+    </div>
+  </div>
+  <p class="small">The same setting makes "steakhouse tx" return steakhouses from anywhere, since state is not on the record. On the next steps list: state as a filter, with tx = texas.</p>
+ </div>
+</section>
+
+<!-- 14 TESTING -->
+<section class="slide" data-ch="Proof" data-title="How relevance was tested">
+ <div class="slide-in">
+  <div class="head">
+    <div class="eyebrow">How I tested relevance</div>
+    <h2 class="wide">46 queries, saved responses, before and after every change</h2>
+  </div>
+  <div class="timeline">
+    <div class="tl"><div class="dot"></div><div class="qn">12<small>queries</small></div><h3>Baseline</h3><p>Plain join, no settings. Six failure modes found.</p></div>
+    <div class="tl"><div class="dot"></div><div class="qn">12<small>rerun</small></div><h3>After tuning</h3><p>Reshaped records and first configuration.</p></div>
+    <div class="tl"><div class="dot"></div><div class="qn">12 + 16</div><h3>Final, Sept 19</h3><p>Dashboard changes: attribute order, stop words, optional words, synonym.</p></div>
+    <div class="tl"><div class="dot"></div><div class="qn">5<small>queries</small></div><h3>Location</h3><p>Times Square, Weston, precision bands, IP fallback.</p></div>
+    <div class="tl"><div class="dot"></div><div class="qn">13<small>queries</small></div><h3>Optional words</h3><p>Settled how request and index lists combine.</p></div>
+  </div>
+  <div class="split" style="align-items:start">
+    <div class="head">
+      <h3 style="font-size:20px">A break I caused, found by the tests</h3>
+      <p class="lede" style="font-size:16px">"mccormick and schmicks" dropped from 10 results to 0. In the untuned index, "and" had been matching the price text "$30 and under". Naming the searchable attributes removed that accidental match.</p>
+      <p class="lede" style="font-size:16px">Fixed, then a follow-up test settled why "and" is not required: optional words sent with a request add to the index list rather than replace it.</p>
+    </div>
+    <div class="panel">
+      <div class="panel-title"><span>"mccormick and schmicks"</span><span>results</span></div>
+      <div class="bars">
+        <div class="bar"><span class="v">10</span><span class="b" style="height:77%"></span></div>
+        <div class="bar zero"><span class="v">0</span><span class="b"></span></div>
+        <div class="bar"><span class="v">13</span><span class="b" style="height:100%"></span></div>
+      </div>
+      <div class="barlbl"><span>Untuned</span><span>Attributes named</span><span>Fixed</span></div>
+    </div>
+  </div>
+ </div>
+</section>
+
+<!-- 15 NEXT STEPS -->
+<section class="slide" data-ch="Next" data-title="Next steps">
+ <div class="slide-in">
+  <div class="head">
+    <div class="eyebrow">Next steps</div>
+    <h2 class="wide">The prototype shows better results. The next phase proves more bookings.</h2>
+  </div>
+  <div class="gap-banner">
+    <div class="gb yes"><b>Shown</b> Right restaurant first, local, browsable, no dead ends</div>
+    <div class="gb no"><b>Not yet shown</b> The effect on search to booking</div>
+  </div>
+  <div class="ns">
+    <div class="nscol go">
+      <h3>Experimentation <span>7</span></h3>
+      <ol>
+        <li>Measure search to booking first: click and conversion events, baseline before changes</li>
+        <li>A/B test each relevance change, one at a time</li>
+        <li>Tune the quality score against bookings</li>
+        <li>Review failing searches every week</li>
+        <li>Popular searches and suggestions on the empty page</li>
+        <li>Natural language search on a slice of traffic</li>
+        <li>Personalization, once history exists</li>
+      </ol>
+    </div>
+    <div class="nscol">
+      <h3>Index fine tuning <span>7</span></h3>
+      <ol>
+        <li>Searchable attribute order from real search data</li>
+        <li>Language and spelling variants at scale</li>
+        <li>A maintained stop word and optional word list</li>
+        <li>State search, with tx = texas</li>
+        <li>Location precision that widens with distance</li>
+        <li>Sorting by price and rating (replicas; <code>price_band</code> is ready)</li>
+        <li>Neighborhood as a visible filter</li>
+      </ol>
+    </div>
+    <div class="nscol">
+      <h3>Data transformation <span>6</span></h3>
+      <ol>
+        <li>Chain and location as source fields</li>
+        <li>Richer discovery attributes: occasion, features, hours, availability</li>
+        <li>Fresh images and reservation links</li>
+        <li>Better neighborhood data</li>
+        <li>Zip code and phone search, with limited typos</li>
+        <li>A scheduled pipeline with partial updates</li>
+      </ol>
+    </div>
+  </div>
+ </div>
+</section>
+
+<!-- 16 CLOSE -->
+<section class="slide" data-ch="Next" data-title="Try it">
+ <div class="slide-in">
+  <div class="close">
+    <div>
+      <div class="eyebrow" style="color:#AEB5FF">Try it</div>
+      <h2 style="margin-top:14px">Five searches that show the whole story</h2>
+      <p>Everything here runs live on the public demo with a search-only key. The repo holds the scripts, the saved test responses and the settings export.</p>
+      <div class="hero-links">
+        <a class="linkbtn" href="https://guizaniol.github.io/search-uplift/site/" target="_blank" rel="noopener">Open the live demo</a>
+        <a class="linkbtn ghost" href="https://github.com/GuiZaniol/search-uplift" target="_blank" rel="noopener">Code on GitHub</a>
+      </div>
+    </div>
+    <div class="try">
+      <div><code>benihanna</code><span>typo, right chain</span></div>
+      <div><code>cyclone anayas</code><span>best location first</span></div>
+      <div><code>(empty) + Mexican</code><span>browse, Tex-Mex included</span></div>
+      <div><code>vegan sushi burrito</code><span>no dead end</span></div>
+      <div><code>Use my exact location</code><span>results reorder, none hidden</span></div>
+    </div>
+  </div>
+ </div>
+</section>
+
+<!-- A1 FIELDS -->
+<section class="slide" data-ch="Appendix" data-title="What goes on the index" data-apx="1">
+ <div class="slide-in">
+  <div class="head">
+    <div class="eyebrow apx">Appendix A · The data</div>
+    <h2 class="wide">19 fields per record, each one earns its place</h2>
+  </div>
+  <div class="tbl">
+   <table>
+    <thead><tr><th>Field</th><th>From</th><th>Used for</th></tr></thead>
+    <tbody>
+     <tr><td>name</td><td>list</td><td>search (card shows brand and location_label instead)</td></tr>
+     <tr><td>brand</td><td>split from name</td><td>search, card title, groups a chain's locations</td></tr>
+     <tr><td>location_label</td><td>split from name</td><td>result card ("Midtown")</td></tr>
+     <tr><td>cuisines</td><td>food_type, split and grouped</td><td>search, filter, result card</td></tr>
+     <tr><td>food_type_raw</td><td>food_type, renamed</td><td>search (original value kept next to the cleaned one)</td></tr>
+     <tr><td>city, neighborhood, area</td><td>list, info, list</td><td>search; city and neighborhood are also filters and on the card</td></tr>
+     <tr><td>dining_style</td><td>info</td><td>search, filter</td></tr>
+     <tr><td>price_label</td><td>price_range, renamed</td><td>filter, result card</td></tr>
+     <tr><td>price_band</td><td>derived from price_label (1 to 3)</td><td>sorting, on the next steps list</td></tr>
+     <tr><td>rating</td><td>stars_count, renamed</td><td>result card</td></tr>
+     <tr><td>reviews_count</td><td>info</td><td>ranking tie breaker, result card</td></tr>
+     <tr><td>quality_score</td><td>rating blended with reviews_count</td><td>ranking</td></tr>
+     <tr><td>_geoloc</td><td>list</td><td>distance</td></tr>
+     <tr><td>image_url, reserve_url</td><td>list</td><td>result card</td></tr>
+     <tr><td>address</td><td>list</td><td>returned with each hit</td></tr>
+    </tbody>
+   </table>
+  </div>
+ </div>
+</section>
+
+<!-- A2 LEFT OUT -->
+<section class="slide" data-ch="Appendix" data-title="What was left out" data-apx="1">
+ <div class="slide-in">
+  <div class="head">
+    <div class="eyebrow apx">Appendix B · The data</div>
+    <h2 class="wide">Eight source fields left out, and why</h2>
+  </div>
+  <div class="split" style="align-items:start">
+   <div class="tbl">
+    <table>
+     <thead><tr><th>Field</th><th>Why it was left out</th></tr></thead>
+     <tbody>
+      <tr><td>country</td><td>All 5,000 records say "US". One value carries no information.</td></tr>
+      <tr><td>phone, phone_number</td><td>The two files disagree on 160 records, and the card shows no phone.</td></tr>
+      <tr><td>mobile_reserve_url</td><td>Same restaurant ID as reserve_url, which the card uses. 2015 scrape, untested.</td></tr>
+      <tr><td>price</td><td>Disagrees with price_range on 220 records. The text is what the diner sees.</td></tr>
+      <tr><td>postal_code</td><td>1,614 distinct values, not searched, filtered or shown.</td></tr>
+      <tr><td>state</td><td>Not searched, filtered or shown. City, area and coordinates carry location.</td></tr>
+      <tr><td>payment_options</td><td>Not searched, filtered or shown.</td></tr>
+     </tbody>
+    </table>
+   </div>
+   <div style="display:grid;gap:14px">
+    <div class="panel">
+      <div class="panel-title"><span>Price conflict, real record</span></div>
+      <p style="font-weight:600;color:var(--navy)">Vinotopia Restaurant and Bar</p>
+      <p class="mono" style="margin-top:8px;color:var(--slate)"><span class="del">price: 2</span> &nbsp; price_range: "$50 and over"</p>
+      <p class="small" style="margin-top:8px">The diner sees "$50 and over", so the text wins and <code>price_band</code> is derived from it.</p>
+    </div>
+    <div class="panel">
+      <div class="panel-title"><span>On zip codes</span></div>
+      <p class="small">Adding postal_code back is one line and a reindex. Searching it well is harder: a typo in the first digits points to a different part of the country, so typos would need to be allowed only in the last digits.</p>
+    </div>
+   </div>
+  </div>
+ </div>
+</section>
+
+<!-- A3 FILES -->
+<section class="slide" data-ch="Appendix" data-title="What each file does" data-apx="1">
+ <div class="slide-in">
+  <div class="head">
+    <div class="eyebrow apx">Appendix C · The repo</div>
+    <h2 class="wide">Run order 01, 05, 02. Export 06 after each dashboard change.</h2>
+  </div>
+  <div class="files">
+    <div class="fgroup">
+      <h3>Build</h3>
+      <div class="fitem"><code>scripts/01-merge.mjs</code><p>Joins JSON and CSV on objectID. Drops country, both phones, mobile reserve link.</p></div>
+      <div class="fitem"><code>scripts/05-transform.mjs</code><p>Name split, cuisine groups, one price, quality score. Writes records.v2.json and batches.</p></div>
+      <div class="fitem"><code>scripts/02-index.sh</code><p>Uploads 5 × 1,000 records. Admin key from .env only.</p></div>
+      <div class="fitem"><code>scripts/06-export-settings.sh</code><p>Reads live dashboard settings into config/index-settings.json. Never writes.</p></div>
+    </div>
+    <div class="fgroup">
+      <h3>Test</h3>
+      <div class="fitem"><code>scripts/03-search.sh</code><p>One query, full response saved. Search-only key, same view as the site.</p></div>
+      <div class="fitem"><code>scripts/04-baseline.sh</code><p>Fixed set of 28 queries. One output folder per run.</p></div>
+      <div class="fitem"><code>scripts/07-geo.sh</code><p>Location tests with the site's parameters. Distance per hit.</p></div>
+      <div class="fitem"><code>scripts/08-optional-words.sh</code><p>13 queries that settled how optional words combine.</p></div>
+    </div>
+    <div class="fgroup">
+      <h3>Site and records</h3>
+      <div class="fitem"><code>site/index.html, app.js, style.css</code><p>InstantSearch from CDN. Filters, results, pagination, location, miles on cards, phone layout.</p></div>
+      <div class="fitem"><code>prep/relevance-testing.md</code><p>Baseline, after, final runs. Fixes, failed experiment, corrections.</p></div>
+      <div class="fitem"><code>out/</code><p>Saved responses: baseline (12), final (28), geo (5), optional-words (13).</p></div>
+    </div>
+  </div>
+ </div>
+</section>
+
+<!-- A4 ASSUMPTIONS + RUN -->
+<section class="slide" data-ch="Appendix" data-title="Assumptions and how to run it" data-apx="1">
+ <div class="slide-in">
+  <div class="head">
+    <div class="eyebrow apx">Appendix D · Assumptions and run it yourself</div>
+    <h2 class="wide">What I assumed about the data, and how to rebuild it</h2>
+  </div>
+  <div class="split" style="align-items:start">
+    <div class="assume">
+      <div class="panel"><h3>Same objectID, same restaurant</h3><p>Every ID is in both files. The merge stops if one is not.</p></div>
+      <div class="panel"><h3>A spaced dash splits brand and location</h3><p>True for 1,086 names. One known exception left: "Star of Honolulu - Five Star".</p></div>
+      <div class="panel"><h3>Price text beats the number</h3><p>220 conflicts. The text is what the diner sees.</p></div>
+      <div class="panel"><h3>Few reviews say less</h3><p>Ratings pulled toward the 4.29 average until reviews add up.</p></div>
+      <div class="panel"><h3>Neighborhood left as delivered</h3><p>Equals city in 2,491 records. The card shows the city once.</p></div>
+      <div class="panel"><h3>Links untested</h3><p>Images and reservation links from 2015. Grey placeholder when an image fails.</p></div>
+    </div>
+    <div style="display:grid;gap:10px">
+<pre class="term"><span class="c"># needs Node, curl, python3 and an Algolia app</span>
+<span class="p">$</span> cp .env.example .env
+<span class="p">$</span> node scripts/01-merge.mjs
+<span class="p">$</span> node scripts/05-transform.mjs
+<span class="p">$</span> ./scripts/02-index.sh
+
+<span class="c"># site: app ID and search-only key in site/app.js</span>
+<span class="p">$</span> cd site &amp;&amp; python3 -m http.server 8000</pre>
+      <p class="small">Index configuration lives in the Algolia dashboard; values in <code>config/index-settings.json</code>. Browser location needs https or localhost.</p>
+    </div>
+  </div>
+ </div>
+</section>
+
+  </main>
+
+  <footer class="navbar">
+    <div class="where" id="where" aria-live="polite"></div>
+    <div class="navbtns">
+      <span class="hint">← → to move</span>
+      <button class="nb" id="prev" type="button" aria-label="Previous screen">Back</button>
+      <span class="count" id="count"></span>
+      <button class="nb primary" id="next" type="button" aria-label="Next screen">Next</button>
+    </div>
+  </footer>
+</div>
+
+<script>
+(function(){
+  // Real responses from out/ in the repo.
+  var star = function(r){ return '<span class="s">★</span> ' + Number(r).toFixed(1); };
+  function hit(h){
+    var cls = 'hit' + (h.cls ? ' ' + h.cls : '');
+    var loc = h.loc ? '<span class="lc">' + h.loc + '</span>' : '';
+    var right = h.right != null ? h.right : star(h.r) + (h.n != null ? '<small>' + h.n.toLocaleString('en-US') + ' reviews</small>' : '');
+    return '<li class="' + cls + '"><span class="av">' + (h.av || h.name.replace(/<[^>]+>/g,'').replace(/^The /,'').charAt(0)) + '</span><div><div class="nm">' + h.name + loc + '</div>' + (h.meta ? '<div class="mt">' + h.meta + '</div>' : '') + '</div><span class="rt">' + right + '</span></li>';
+  }
+  function fill(id, list){ var el = document.getElementById(id); if (el) el.innerHTML = list.map(hit).join(''); }
+
+  fill('cyBefore', [
+    {name:"Cyclone Anaya's - Rice Village", r:4.3, n:23, cls:'raw', av:'C', meta:'Tex-Mex · Houston'},
+    {name:"Cyclone Anaya's - Woodway", r:3.0, n:14, cls:'raw bad', av:'C', meta:'Tex-Mex · Houston'},
+    {name:"Cyclone Anaya's -&nbsp; Durham", r:4.0, n:22, cls:'raw', av:'C', meta:'Tex-Mex · Houston'},
+    {name:"Cyclone Anaya's - CityCentre", r:4.3, n:40, cls:'raw', av:'C', meta:'Tex-Mex · Houston'},
+    {name:"Cyclone Anaya's - Midtown", r:4.4, n:22, cls:'raw', av:'C', meta:'Tex-Mex · Houston'}
+  ]);
+  fill('cyAfter', [
+    {name:"<mark>Cyclone Anaya's</mark>", loc:'Midtown', r:4.4, n:22, av:'C', meta:'Tex-Mex, Mexican · Houston'},
+    {name:"<mark>Cyclone Anaya's</mark>", loc:'CityCentre', r:4.3, n:40, av:'C', meta:'Tex-Mex, Mexican · Houston'},
+    {name:"<mark>Cyclone Anaya's</mark>", loc:'Rice Village', r:4.3, n:23, av:'C', meta:'Tex-Mex, Mexican · Houston'},
+    {name:"<mark>Cyclone Anaya's</mark>", loc:'Durham', r:4.0, n:22, av:'C', meta:'Tex-Mex, Mexican · Houston'},
+    {name:"<mark>Cyclone Anaya's</mark>", loc:'Woodway', r:3.0, n:14, av:'C', meta:'Tex-Mex, Mexican · Houston'}
+  ]);
+  fill('emBefore', [
+    {name:'The Edgewater Grill', r:3.9, meta:'American · San Diego'},
+    {name:'Harbor House', r:4.1, meta:'Seafood · San Diego'},
+    {name:'Pier Cafe', r:4.1, meta:'Seafood · San Diego'},
+    {name:'Fujiyama Steak House of Japan', r:4.5, meta:'Sushi · Indianapolis'}
+  ].map(function(h){ h.cls='muted'; return h; }));
+  fill('emAfter', [
+    {name:'Pazza Notte', r:5.0, n:156, meta:'Italian · 884 m'},
+    {name:'Le Bernardin', r:4.7, n:4232, meta:'French · 487 m'},
+    {name:'PizzArte', r:4.5, n:530, meta:'Italian · 873 m'},
+    {name:'Restaurant Soba Nippon', r:4.5, n:217, meta:'Japanese · 705 m'}
+  ]);
+  fill('tdb', [
+    {name:'<mark>Texas de Brazil</mark>', loc:'Yonkers', r:4.5, meta:'25 km'},
+    {name:'<mark>Texas de Brazil</mark>', loc:'Syracuse', r:4.5, meta:'315 km'},
+    {name:'<mark>Texas de Brazil</mark>', loc:'Pittsburgh', r:4.5, meta:'510 km'},
+    {name:'<mark>Texas de Brazil</mark>', loc:'Columbus', r:4.5, meta:'760 km'},
+    {name:'<mark>Texas de Brazil</mark>', loc:'Memphis', r:4.4, meta:'1,539 km'},
+    {name:'<mark>Texas de Brazil</mark>', loc:'Addison', r:4.7, meta:'2,202 km · best rated, sixth', cls:'best'}
+  ].map(function(h){ h.av='T'; return h; }));
+  fill('vsb', [
+    {name:'<mark>Sushi</mark> Sasabune Hawaii', r:4.8, n:329, meta:'Sushi, Japanese · Honolulu'},
+    {name:'Shari <mark>Sushi</mark> Lounge', r:4.7, n:575, meta:'Sushi, Japanese · Orlando'},
+    {name:'Edoko <mark>Sushi</mark>', r:4.7, n:324, meta:'Sushi, Japanese · Frisco'},
+    {name:'Kabooki <mark>Sushi</mark>', r:4.7, n:261, meta:'Sushi, Japanese · Orlando'}
+  ]);
+
+  // Hero: cycle real queries from the final index.
+  var demos = [
+    {q:'benihanna', n:'24 results', note:'Typo in the query, right restaurant first.', hits:[
+      {name:'<mark>Benihana</mark>', loc:'Indianapolis', r:4.4, n:602, meta:'Japanese · $30 and under'},
+      {name:'<mark>Benihana</mark>', loc:'Sacramento', r:4.4, n:530, meta:'Japanese · $30 and under'},
+      {name:'<mark>Benihana</mark>', loc:'Scottsdale', r:4.4, n:514, meta:'Japanese · $30 and under'}]},
+    {q:'meltingpot', n:'26 results', note:'Words run together, still a match.', hits:[
+      {name:'The <mark>Melting Pot</mark>', loc:'Tucson', r:4.7, n:415, meta:'Fondue · $31 to $50'},
+      {name:'The <mark>Melting Pot</mark>', loc:'Arrowhead', r:4.7, n:198, meta:'Fondue · $31 to $50'},
+      {name:'The <mark>Melting Pot</mark>', loc:'Boise', r:4.6, n:391, meta:'Fondue · $31 to $50'}]},
+    {q:'tex-mex', n:'5 results', note:'Chain locations labeled, best rated first.', hits:[
+      {name:"Cyclone Anaya's", loc:'Midtown', r:4.4, n:22, meta:'<mark>Tex-Mex</mark>, Mexican · Houston'},
+      {name:"Cyclone Anaya's", loc:'CityCentre', r:4.3, n:40, meta:'<mark>Tex-Mex</mark>, Mexican · Houston'},
+      {name:"Cyclone Anaya's", loc:'Rice Village', r:4.3, n:23, meta:'<mark>Tex-Mex</mark>, Mexican · Houston'}]},
+    {q:'ruths', n:'35 results', note:'Partial name, best location first.', hits:[
+      {name:"<mark>Ruth's</mark> Chris Steak House", loc:'Baton Rouge', r:4.8, n:306, meta:'Steakhouse · $50 and over'},
+      {name:"<mark>Ruth's</mark> Chris Steak House", loc:'Pittsburgh', r:4.7, n:653, meta:'Steakhouse · $50 and over'},
+      {name:"<mark>Ruth's</mark> Chris Steak House", loc:'Destin', r:4.7, n:309, meta:'Steakhouse · $50 and over'}]}
+  ];
+  var hq = document.getElementById('heroQ'), hn = document.getElementById('heroN'), hh = document.getElementById('heroHits'), hnote = document.getElementById('heroNote');
+  function showDemo(d){ hq.textContent = d.q; hn.textContent = d.n; hh.innerHTML = d.hits.map(hit).join(''); hnote.textContent = 'Real responses from the final index. ' + d.note; }
+  showDemo(demos[0]);
+  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var di = 0, timer = null;
+  function typeNext(){
+    di = (di + 1) % demos.length; var d = demos[di], i = 0;
+    hq.textContent = ''; hn.textContent = ''; hh.style.opacity = '.35';
+    (function tick(){
+      if (i <= d.q.length){ hq.textContent = d.q.slice(0, i++); timer = setTimeout(tick, 85); }
+      else { showDemo(d); hh.style.opacity = '1'; timer = setTimeout(typeNext, 3200); }
+    })();
+  }
+  hh.style.transition = 'opacity .25s';
+
+  // Navigation
+  var slides = Array.prototype.slice.call(document.querySelectorAll('.slide'));
+  var prog = document.getElementById('progress'), where = document.getElementById('where'), count = document.getElementById('count');
+  var prev = document.getElementById('prev'), next = document.getElementById('next');
+  var mainCount = slides.filter(function(s){ return !s.dataset.apx; }).length;
+  slides.forEach(function(s, i){
+    var b = document.createElement('button'); b.type = 'button';
+    b.setAttribute('aria-label', (i+1) + ': ' + s.dataset.title);
+    b.title = s.dataset.title; if (s.dataset.apx) b.classList.add('apx');
+    b.addEventListener('click', function(){ go(i); }); prog.appendChild(b);
+  });
+  var bars = prog.children, cur = -1;
+  function go(i, fromHash){
+    i = Math.max(0, Math.min(slides.length - 1, i)); if (i === cur) return;
+    slides.forEach(function(s, k){ s.hidden = k !== i; s.classList.toggle('active', k === i); });
+    for (var k = 0; k < bars.length; k++){ bars[k].classList.toggle('now', k === i); bars[k].classList.toggle('done', k < i); }
+    var s = slides[i]; s.scrollTop = 0;
+    where.innerHTML = '<b>' + s.dataset.ch + '</b> · ' + s.dataset.title;
+    count.textContent = s.dataset.apx ? 'A' + (i - mainCount + 1) + ' / ' + (slides.length - mainCount) : (i + 1) + ' / ' + mainCount;
+    prev.disabled = i === 0; next.disabled = i === slides.length - 1;
+    next.textContent = i === mainCount - 1 ? 'Appendix' : 'Next';
+    cur = i;
+    if (!fromHash){ try { history.replaceState(null, '', '#s' + (i + 1)); } catch(e){} }
+    clearTimeout(timer);
+    if (i === 0 && !reduce){ timer = setTimeout(typeNext, 2600); }
+  }
+  prev.addEventListener('click', function(){ go(cur - 1); });
+  next.addEventListener('click', function(){ go(cur + 1); });
+  document.addEventListener('keydown', function(e){
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+    var k = e.key;
+    if (k === 'ArrowRight' || k === 'PageDown' || (k === ' ' && !e.shiftKey)){ e.preventDefault(); go(cur + 1); }
+    else if (k === 'ArrowLeft' || k === 'PageUp' || (k === ' ' && e.shiftKey)){ e.preventDefault(); go(cur - 1); }
+    else if (k === 'Home'){ go(0); } else if (k === 'End'){ go(slides.length - 1); }
+  });
+  var sx = null, sy = null;
+  document.getElementById('stage').addEventListener('touchstart', function(e){ sx = e.touches[0].clientX; sy = e.touches[0].clientY; }, {passive:true});
+  document.getElementById('stage').addEventListener('touchend', function(e){
+    if (sx == null) return; var dx = e.changedTouches[0].clientX - sx, dy = e.changedTouches[0].clientY - sy;
+    if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5){ go(cur + (dx < 0 ? 1 : -1)); } sx = null;
+  }, {passive:true});
+  function fromHash(){ var m = /^#s(\d+)$/.exec(location.hash || ''); return m ? parseInt(m[1], 10) - 1 : 0; }
+  window.addEventListener('hashchange', function(){ go(fromHash(), true); });
+  go(fromHash(), true);
+})();
+</script>
+</body>
+</html>
